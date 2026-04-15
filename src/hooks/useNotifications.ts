@@ -4,11 +4,11 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export interface CandidateNotification {
   id: string;
-  company_id: string;
+  user_id: string;
   created_at: string;
-  is_read: boolean;
+  read: boolean;
   message: string;
-  metadata: any;
+  title: string;
   type: string;
 }
 
@@ -18,11 +18,11 @@ export function useNotifications() {
   return useQuery<CandidateNotification[]>({
     queryKey: ["candidate-notifications", user?.id],
     queryFn: async () => {
-      const query = supabase.from("notifications").select("*").order("created_at", { ascending: false }).limit(50);
-
-      const { data, error } = user?.id
-        ? await query.or(`metadata->>recipient_type.eq.global,metadata->>recipient_id.eq.${user.id}`)
-        : await query;
+      const { data, error } = await supabase
+        .from("notifications")
+        .select("*")
+        .order("created_at", { ascending: false })
+        .limit(50);
 
       if (error) throw error;
 

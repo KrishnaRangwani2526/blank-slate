@@ -30,8 +30,8 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
 
   const openAdd = () => { resetForm(); setAdding(true); };
   const openEdit = (p: Tables<"projects">) => {
-    setTitle(p.title); setDescription(p.description || ""); setLink(p.project_link || "");
-    setTechStack((p.tech_stack || []).join(", ")); setStartDate(p.start_date || ""); setEndDate(p.end_date || "");
+    setTitle(p.title); setDescription(p.description || ""); setLink(p.url || "");
+    setTechStack((p.tech_stack || []).join(", ")); setStartDate(""); setEndDate("");
     setEditing(p);
   };
 
@@ -40,9 +40,9 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
     if (!user) return;
     setSaving(true);
     const data = {
-      title, description, project_link: link,
+      title, description, url: link,
       tech_stack: techStack.split(",").map(s => s.trim()).filter(Boolean),
-      start_date: startDate || null, end_date: endDate || null, user_id: user.id,
+      user_id: user.id,
     };
 
     if (editing) {
@@ -133,8 +133,8 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-card-foreground">{project.title}</p>
-                    {project.project_link && (
-                      <a href={project.project_link} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                    {project.url && (
+                      <a href={project.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     )}
@@ -155,7 +155,6 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
                     </div>
                   </div>
                   {project.description && <p className="text-xs text-muted-foreground mt-0.5">{project.description}</p>}
-                  <p className="text-xs text-muted-foreground">{project.start_date} - {project.end_date || "Present"}</p>
                   {project.tech_stack && project.tech_stack.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {project.tech_stack.map((t) => (

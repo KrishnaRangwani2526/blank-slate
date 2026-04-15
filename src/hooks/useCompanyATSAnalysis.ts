@@ -12,9 +12,9 @@ export function useCompanyATSAnalysis() {
     try {
       // Fetch candidate data
       const { data: candidateData, error } = await supabase
-        .from("candidates")
+        .from("profiles")
         .select("*")
-        .eq("id", candidateId)
+        .eq("user_id", candidateId)
         .single();
 
       if (error || !candidateData) throw new Error("Candidate not found");
@@ -24,23 +24,17 @@ export function useCompanyATSAnalysis() {
 
       const demoResult: ATSResult = {
         ats_score: 72,
-        summary: `${candidateData.name} has a strong technical profile with solid project experience. Areas for improvement include expanding certifications and deepening expertise in system design.`,
+        summary: `${candidateData.full_name} has a strong technical profile with solid project experience.`,
         profile_summary: {
           bio: candidateData.bio || "Professional developer",
-          top_skills: (candidateData.skills || []).slice(0, 6),
-          current_projects:
-            (candidateData.projects as any[])?.slice(0, 2).map((p) => ({
-              name: p.title || "Project",
-              description: p.description || "",
-              tech: p.tech_stack || [],
-            })) || [],
+          top_skills: [],
+          current_projects: [],
           certifications: {
-            has_certs: (candidateData.education as any[])?.length > 0,
-            list: (candidateData.education as any[])?.map((e) => e.degree) || [],
+            has_certs: false,
+            list: [],
             summary: "Check certifications section",
           },
-          experience_highlights:
-            (candidateData.experience as any[])?.slice(0, 3).map((e) => `${e.role} at ${e.company}`) || [],
+          experience_highlights: [],
         },
         score_breakdown: [
           { category: "Skills Quality & Relevance", score: 78, max: 100, detail: "Strong backend stack but missing cloud-native tools" },
@@ -77,7 +71,7 @@ export function useCompanyATSAnalysis() {
         ...(jobRequirements
           ? {
               match_percentage: 64,
-              matched_skills: (candidateData.skills || []).slice(0, 4),
+              matched_skills: [],
               missing_skills: ["Kubernetes", "Terraform", "GraphQL"],
               gap_analysis:
                 "Profile shows strong foundational skills but lacks cloud-native and infrastructure-as-code experience required for this role.",
