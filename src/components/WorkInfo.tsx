@@ -20,7 +20,7 @@ const WorkInfo = ({ profile, refetch }: Props) => {
 
   const openEdit = () => {
     setLocation(profile?.location || "");
-    setLearning(profile?.currently_learning || "");
+    setLearning(profile?.bio || "");
     setEditing(true);
   };
 
@@ -28,13 +28,13 @@ const WorkInfo = ({ profile, refetch }: Props) => {
     e.preventDefault();
     if (!user) return;
     setSaving(true);
-    await supabase.from("profiles").update({ location, currently_learning: learning }).eq("user_id", user.id);
+    await supabase.from("profiles").update({ location, bio: learning }).eq("user_id", user.id);
     setSaving(false);
     setEditing(false);
     refetch();
   };
 
-  if (!profile?.location && !profile?.currently_learning && !isOwner) return null;
+  if (!profile?.location && !profile?.bio && !isOwner) return null;
 
   return (
     <>
@@ -50,12 +50,12 @@ const WorkInfo = ({ profile, refetch }: Props) => {
                 </div>
               </div>
             )}
-            {profile?.currently_learning && (
+            {profile?.bio && (
               <div className="flex items-center gap-2">
                 <BookOpen className="h-4 w-4 text-muted-foreground" />
                 <div>
                   <p className="text-xs text-muted-foreground">Currently Learning</p>
-                  <p className="text-sm font-medium text-card-foreground">{profile.currently_learning}</p>
+                  <p className="text-sm font-medium text-card-foreground">{profile.bio}</p>
                 </div>
               </div>
             )}

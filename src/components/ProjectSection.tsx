@@ -30,7 +30,7 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
 
   const openAdd = () => { resetForm(); setAdding(true); };
   const openEdit = (p: Tables<"projects">) => {
-    setTitle(p.title); setDescription(p.description || ""); setLink(p.url || "");
+    setTitle(p.title); setDescription(p.description || ""); setLink(p.project_link || "");
     setTechStack((p.tech_stack || []).join(", ")); setStartDate(""); setEndDate("");
     setEditing(p);
   };
@@ -40,7 +40,7 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
     if (!user) return;
     setSaving(true);
     const data = {
-      title, description, url: link,
+      title, description, project_link: link,
       tech_stack: techStack.split(",").map(s => s.trim()).filter(Boolean),
       user_id: user.id,
     };
@@ -133,8 +133,8 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-card-foreground">{project.title}</p>
-                    {project.url && (
-                      <a href={project.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                    {project.project_link && (
+                      <a href={project.project_link} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     )}
