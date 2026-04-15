@@ -6,7 +6,17 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { ArrowLeft, MapPin, Clock, Monitor } from "lucide-react";
+import { ArrowLeft, MapPin, Clock, Users } from "lucide-react";
+
+function extractSkillNames(requirements: any): string[] {
+  if (!requirements) return [];
+  if (Array.isArray(requirements)) {
+    return requirements
+      .map((r: any) => (typeof r === "string" ? r : r?.name || ""))
+      .filter(Boolean);
+  }
+  return [];
+}
 
 export default function JobDetail() {
   const { id } = useParams();
@@ -38,7 +48,7 @@ export default function JobDetail() {
   if (isLoading) return <DashboardLayout><p>Loading...</p></DashboardLayout>;
   if (!job) return <DashboardLayout><p>Job not found</p></DashboardLayout>;
 
-  const requirements = (job.required_skills || []) as string[];
+  const requirements = extractSkillNames(job.requirements);
 
   return (
     <DashboardLayout>
@@ -52,10 +62,15 @@ export default function JobDetail() {
             <h1 className="text-2xl font-heading font-bold">{job.title}</h1>
             <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
               <span className="flex items-center gap-1"><MapPin className="h-3 w-3" /> {job.location || "Remote"}</span>
-              <span className="flex items-center gap-1"><Clock className="h-3 w-3 capitalize" /> {job.type || "Full-time"}</span>
+              <span className="flex items-center gap-1"><Clock className="h-3 w-3" /> {job.job_type || "Full-time"}</span>
             </div>
           </div>
-          <Badge variant={job.status === "open" ? "default" : "secondary"} className="capitalize">{job.status}</Badge>
+          <div className="flex items-center gap-2">
+            <Badge variant={job.status === "active" ? "default" : "secondary"} className="capitalize">{job.status}</Badge>
+            <Button onClick={() => navigate(`/jobs/${job.id}/candidates`)} className="gap-2">
+              <Users className="h-4 w-4" /> View Candidates ({applications.length})
+            </Button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -108,7 +123,12 @@ export default function JobDetail() {
             <Card>
               <CardHeader><CardTitle className="font-heading text-lg">Platform Requirements</CardTitle></CardHeader>
               <CardContent className="space-y-2 text-sm">
-                <p className="text-sm text-muted-foreground">Platform requirements not configured.</p>
+                {job.github_requirement?.enabled && <p>✅ GitHub (weight: {job.github_requirement.weight})</p>}
+                {job.leetcode_requirement?.enabled && <p>✅ LeetCode (weight: {job.leetcode_requirement.weight})</p>}
+                {job.kaggle_requirement?.enabled && <p>✅ Kaggle (weight: {job.kaggle_requirement.weight})</p>}
+                {!job.github_requirement?.enabled && !job.leetcode_requirement?.enabled && !job.kaggle_requirement?.enabled && (
+                  <p className="text-muted-foreground">No platform requirements configured.</p>
+                )}
               </CardContent>
             </Card>
           </div>
