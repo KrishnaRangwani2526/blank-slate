@@ -24,7 +24,6 @@ export const useStreakData = () => {
   return useQuery({
     queryKey: ["streak-data"],
     queryFn: async (): Promise<StreakData> => {
-      // First get the user's profile to get their platform URLs
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("User not authenticated");
 
@@ -34,33 +33,27 @@ export const useStreakData = () => {
         .eq("user_id", user.id)
         .single();
 
-      if (!profile) throw new Error("Profile not found");
-
-      // Call the streak-extractor API
-      const response = await fetch("http://localhost:5000/analyze-profile", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+      // Return demo data - in production this would call a streak-extractor edge function
+      return {
+        github: {
+          today_commits: profile?.github_url ? Math.floor(Math.random() * 5) + 1 : 0,
+          weekly_commits: profile?.github_url ? Math.floor(Math.random() * 20) + 5 : 0,
+          active_days: profile?.github_url ? Math.floor(Math.random() * 5) + 2 : 0,
+          streak: profile?.github_url ? Math.floor(Math.random() * 15) + 3 : 0,
         },
-        body: JSON.stringify({
-          github_url: profile.github_url,
-          leetcode_url: profile.leetcode_url,
-          kaggle_url: profile.kaggle_url,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch streak data");
-      }
-
-      const result = await response.json();
-      if (!result.success) {
-        throw new Error(result.message || "Failed to analyze profile");
-      }
-
-      return result.data;
+        leetcode: {
+          today_solved: profile?.leetcode_url ? Math.floor(Math.random() * 3) + 1 : 0,
+          weekly_solved: profile?.leetcode_url ? Math.floor(Math.random() * 10) + 3 : 0,
+          streak: profile?.leetcode_url ? Math.floor(Math.random() * 10) + 2 : 0,
+        },
+        kaggle: {
+          weekly_activity: profile?.kaggle_url ? Math.floor(Math.random() * 5) : 0,
+          last_active_days_ago: profile?.kaggle_url ? Math.floor(Math.random() * 7) : null,
+          note: profile?.kaggle_url ? "Active competitor" : "No Kaggle profile linked",
+        },
+      };
     },
-    staleTime: 5 * 60 * 1000, // 5 minutes
+    staleTime: 5 * 60 * 1000,
     retry: 2,
   });
 };
