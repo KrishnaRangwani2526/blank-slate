@@ -5,7 +5,6 @@ import { fileURLToPath } from "url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-// Force server restart after dependency update
 export default defineConfig({
   plugins: [react()],
   resolve: {
