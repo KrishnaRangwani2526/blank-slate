@@ -24,6 +24,7 @@ import CandidateAISuggestions from './pages/candidate/AISuggestionsPage';
 import CandidateATSScore from './pages/candidate/ATSScorePage';
 import CandidateResume from './pages/candidate/ResumePage';
 import CandidateNetwork from './pages/candidate/NetworkPage';
+import CandidateSettings from './pages/candidate/SettingsPage';
 
 // HR pages
 import HRDashboard from './pages/Dashboard';
@@ -73,6 +74,7 @@ function AppRoutes() {
         <Route path="/ats-score" element={<CandidateATSScore />} />
         <Route path="/resume" element={<CandidateResume />} />
         <Route path="/network" element={<CandidateNetwork />} />
+        <Route path="/settings" element={<CandidateSettings />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     );
