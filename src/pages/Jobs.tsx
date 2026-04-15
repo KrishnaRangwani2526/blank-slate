@@ -3,7 +3,7 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Eye, Pencil, Trash2 } from "lucide-react";
+import { Plus, Eye, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
@@ -102,11 +102,11 @@ export default function Jobs() {
                     <Badge variant={job.status === "active" ? "default" : "secondary"} className="capitalize">
                       {job.status}
                     </Badge>
-                    <Button variant="ghost" size="icon" onClick={() => navigate(`/jobs/${job.id}`)}>
-                      <Eye className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/jobs/${job.id}`)}>
+                      <Eye className="h-4 w-4 mr-1" /> View
                     </Button>
-                    <Button variant="ghost" size="icon" onClick={() => navigate(`/jobs/${job.id}/edit`)}>
-                      <Pencil className="h-4 w-4" />
+                    <Button variant="ghost" size="sm" onClick={() => navigate(`/jobs/${job.id}/candidates`)}>
+                      Candidates
                     </Button>
                     <Button variant="ghost" size="icon" onClick={() => deleteJob.mutate(job.id)}>
                       <Trash2 className="h-4 w-4 text-destructive" />
