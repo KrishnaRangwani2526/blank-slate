@@ -37,7 +37,19 @@ export interface ProfileAnalysisResponse {
 
 export const rankingApi = {
   rankJob: async (request: JobRankRequest): Promise<JobRankResponse> => {
-    // Use Supabase to get candidates and rank them locally
+    // First get the job to extract skills from requirements
+    const { data: job } = await supabase
+      .from("jobs")
+      .select("requirements")
+      .eq("id", request.job_id)
+      .maybeSingle();
+
+    const requiredSkills = request.required_skills.length > 0
+      ? request.required_skills
+      : (Array.isArray(job?.requirements)
+          ? (job.requirements as any[]).map((r: any) => (typeof r === "string" ? r : r?.name || "")).filter(Boolean)
+          : []);
+
     const { data: applications } = await supabase
       .from("applications")
       .select("*")
@@ -58,14 +70,14 @@ export const rankingApi = {
       .select("*")
       .in("user_id", userIds);
 
-    const candidates = (profiles || []).map((profile, index) => {
+    const candidates = (profiles || []).map((profile) => {
       const userSkills = (allSkills || []).filter(s => s.user_id === profile.user_id);
       const skillNames = userSkills.map(s => s.name);
       const matchedSkills = skillNames.filter(s =>
-        request.required_skills.some(rs => rs.toLowerCase() === s.toLowerCase())
+        requiredSkills.some(rs => rs.toLowerCase() === s.toLowerCase())
       );
-      const atsScore = request.required_skills.length > 0
-        ? (matchedSkills.length / request.required_skills.length) * 100
+      const atsScore = requiredSkills.length > 0
+        ? (matchedSkills.length / requiredSkills.length) * 100
         : 50;
 
       return {
@@ -82,7 +94,6 @@ export const rankingApi = {
       };
     });
 
-    // Sort by ATS score descending and assign ranks
     candidates.sort((a, b) => b.ats_score - a.ats_score);
     candidates.forEach((c, i) => { c.rank = i + 1; });
 
