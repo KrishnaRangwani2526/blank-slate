@@ -29,7 +29,7 @@ const LeftSidebar = () => {
         .from("skills")
         .select("name")
         .eq("user_id", user?.id)
-        .order("updated_at", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(4);
 
       if (error) throw error;

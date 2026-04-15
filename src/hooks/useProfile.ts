@@ -37,45 +37,9 @@ export const useProfile = (userId?: string): ProfileData => {
   const [loading, setLoading] = useState(true);
 
   const syncCandidateRecord = useCallback(async () => {
-    if (!profile) return;
-
-    try {
-      await supabase.from("candidates").upsert({
-        id: profile.id,
-        name: profile.full_name || "",
-        email: user?.email || null,
-        bio: profile.bio,
-        about: profile.about,
-        avatar_url: profile.avatar_url,
-        github_url: profile.github_url,
-        kaggle_url: profile.kaggle_url,
-        leetcode_url: profile.leetcode_url,
-        skills: skills.map((skill) => skill.name).filter(Boolean),
-        experience: experience.map((item) => ({
-          company: item.company,
-          role: item.role,
-          startDate: item.start_date,
-          endDate: item.end_date,
-          description: item.description,
-        })),
-        education: education.map((item) => ({
-          school: item.school,
-          degree: item.degree,
-          field: item.field,
-          startDate: item.start_date,
-          endDate: item.end_date,
-        })),
-        projects: projects.map((project) => ({
-          title: project.title,
-          description: project.description,
-          link: project.project_link,
-          tech_stack: project.tech_stack,
-        })),
-      });
-    } catch {
-      // Ignore sync failures - company-side candidate table may not exist in dev environments.
-    }
-  }, [profile, skills, experience, education, projects, user?.email]);
+    // Candidate data is derived from profiles/skills/etc tables directly.
+    // No need to sync to a separate candidates table.
+  }, []);
 
   const fetchAll = useCallback(async () => {
     if (!targetUserId) { setLoading(false); return; }
