@@ -1,11 +1,21 @@
 // @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Search, Users, Briefcase, MessageSquare, Bell, ChevronDown, User, FileText, Brain, BarChart3, Code2, Plus, Settings, X } from "lucide-react";
+import { Search, Users, Briefcase, MessageSquare, Bell, ChevronDown, User, FileText, Brain, BarChart3, Code2, Plus, Settings, X, ExternalLink } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { useNotifications } from "@/hooks/useNotifications";
 import { useStreakData } from "@/hooks/useStreakData";
+import { useProfile } from "@/hooks/useProfile";
+
+const StreakDots = ({ days }: { days: number[] }) => (
+  <div className="flex gap-0.5 mt-1">
+    {days.map((active, i) => (
+      <div key={i} className={`w-2.5 h-2.5 rounded-sm ${active ? "bg-green-500" : "bg-secondary"}`} />
+    ))}
+  </div>
+);
 
 const Navbar = () => {
   const [searchQuery, setSearchQuery] = useState("");
@@ -17,6 +27,7 @@ const Navbar = () => {
   const { user, signOut } = useAuth();
   const { data: notifications = [] } = useNotifications();
   const { data: streakData } = useStreakData();
+  const { profile } = useProfile();
   const navigate = useNavigate();
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -25,7 +36,6 @@ const Navbar = () => {
     navigate("/auth");
   };
 
-  // Close all dropdowns on outside click
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
@@ -44,11 +54,28 @@ const Navbar = () => {
   const Dropdown = ({ children, open }: { children: React.ReactNode; open: boolean }) => {
     if (!open) return null;
     return (
-      <div className="absolute right-0 top-full mt-1.5 w-64 bg-card rounded-xl shadow-lg border p-2 z-[200] animate-fade-in">
+      <div className="absolute right-0 top-full mt-1.5 w-72 bg-card rounded-xl shadow-lg border p-2 z-[200] animate-fade-in">
         {children}
       </div>
     );
   };
+
+  const hasGithub = !!profile?.github_url;
+  const hasLeetcode = !!profile?.leetcode_url;
+  const hasKaggle = !!profile?.kaggle_url;
+
+  // Generate 7 day streak dots from streak data
+  const generateDots = (streak: number) => {
+    const dots = [];
+    for (let i = 6; i >= 0; i--) {
+      dots.push(i < streak ? 1 : 0);
+    }
+    return dots;
+  };
+
+  const githubDots = generateDots(streakData?.github?.streak || 0);
+  const leetcodeDots = generateDots(streakData?.leetcode?.streak || 0);
+  const kaggleDots = generateDots(streakData?.kaggle?.weekly_activity || 0);
 
   return (
     <>
@@ -69,25 +96,21 @@ const Navbar = () => {
           </div>
 
           <div className="flex items-center gap-0.5">
-            {/* My Network */}
             <Link to="/network" className="flex flex-col items-center px-2.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-200">
               <Users className="h-5 w-5" />
               <span className="text-[10px] mt-0.5 hidden md:block">Network</span>
             </Link>
 
-            {/* Jobs */}
             <Link to="/jobs" className="flex flex-col items-center px-2.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-200">
               <Briefcase className="h-5 w-5" />
               <span className="text-[10px] mt-0.5 hidden md:block">Jobs</span>
             </Link>
 
-            {/* Messaging */}
             <button onClick={() => { closeAll(); setMsgOpen(!msgOpen); }} className="flex flex-col items-center px-2.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-200">
               <MessageSquare className="h-5 w-5" />
               <span className="text-[10px] mt-0.5 hidden md:block">Messaging</span>
             </button>
 
-            {/* Notifications */}
             <Link to="/notifications" className="relative flex flex-col items-center px-2.5 py-1 rounded-lg text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors duration-200">
               <Bell className="h-5 w-5" />
               <span className="text-[10px] mt-0.5 hidden md:block">Notifications</span>
@@ -107,19 +130,33 @@ const Navbar = () => {
               <Dropdown open={githubOpen}>
                 <p className="px-3 py-2 text-sm font-semibold text-foreground">GitHub</p>
                 <hr className="border-border my-1" />
-                <div className="px-3 py-2 text-xs text-muted-foreground">
-                  Streak: 🔥 {streakData?.github?.streak || 0} days
-                </div>
-                <div className="px-3 py-1.5 text-xs text-muted-foreground">
-                  This week: {streakData?.github?.weekly_commits || 0} commits
-                </div>
-                <div className="px-3 py-1.5 text-xs text-muted-foreground">
-                  Active days: {streakData?.github?.active_days || 0}/7
-                </div>
-                <hr className="border-border my-1" />
-                <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-primary transition-colors">
-                  Open GitHub Profile →
-                </a>
+                {hasGithub ? (
+                  <>
+                    <div className="px-3 py-2">
+                      <p className="text-xs text-muted-foreground mb-1">7 Day Streak</p>
+                      <StreakDots days={githubDots} />
+                    </div>
+                    <div className="px-3 py-1.5 flex justify-between text-xs">
+                      <span className="text-muted-foreground">Total Commits</span>
+                      <span className="font-medium text-foreground">{streakData?.github?.weekly_commits || 0}</span>
+                    </div>
+                    <div className="px-3 py-1.5 flex justify-between text-xs">
+                      <span className="text-muted-foreground">This Week</span>
+                      <span className="font-medium text-foreground">{streakData?.github?.weekly_commits || 0}</span>
+                    </div>
+                    <hr className="border-border my-1" />
+                    <a href={profile?.github_url || "https://github.com"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-primary transition-colors">
+                      <ExternalLink className="h-3.5 w-3.5" /> Open GitHub
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <div className="px-3 py-3 text-xs text-muted-foreground">No GitHub profile linked yet.</div>
+                    <Link to="/add-platform" onClick={() => setGithubOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-primary transition-colors">
+                      <Plus className="h-3.5 w-3.5" /> Add GitHub
+                    </Link>
+                  </>
+                )}
               </Dropdown>
             </div>
 
@@ -132,16 +169,33 @@ const Navbar = () => {
               <Dropdown open={leetcodeOpen}>
                 <p className="px-3 py-2 text-sm font-semibold text-foreground">LeetCode</p>
                 <hr className="border-border my-1" />
-                <div className="px-3 py-2 text-xs text-muted-foreground">
-                  Streak: 🔥 {streakData?.leetcode?.streak || 0} days
-                </div>
-                <div className="px-3 py-1.5 text-xs text-muted-foreground">
-                  This week: {streakData?.leetcode?.weekly_solved || 0} problems
-                </div>
-                <hr className="border-border my-1" />
-                <a href="https://leetcode.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-primary transition-colors">
-                  Open LeetCode Profile →
-                </a>
+                {hasLeetcode ? (
+                  <>
+                    <div className="px-3 py-2">
+                      <p className="text-xs text-muted-foreground mb-1">7 Day Streak</p>
+                      <StreakDots days={leetcodeDots} />
+                    </div>
+                    <div className="px-3 py-1.5 flex justify-between text-xs">
+                      <span className="text-muted-foreground">Total Questions</span>
+                      <span className="font-medium text-foreground">{streakData?.leetcode?.weekly_solved || 0}</span>
+                    </div>
+                    <div className="px-3 py-1.5 flex justify-between text-xs">
+                      <span className="text-muted-foreground">This Week</span>
+                      <span className="font-medium text-foreground">{streakData?.leetcode?.weekly_solved || 0}</span>
+                    </div>
+                    <hr className="border-border my-1" />
+                    <a href={profile?.leetcode_url || "https://leetcode.com"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-primary transition-colors">
+                      <ExternalLink className="h-3.5 w-3.5" /> Open LeetCode
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <div className="px-3 py-3 text-xs text-muted-foreground">No LeetCode profile linked yet.</div>
+                    <Link to="/add-platform" onClick={() => setLeetcodeOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-primary transition-colors">
+                      <Plus className="h-3.5 w-3.5" /> Add LeetCode
+                    </Link>
+                  </>
+                )}
               </Dropdown>
             </div>
 
@@ -154,16 +208,29 @@ const Navbar = () => {
               <Dropdown open={kaggleOpen}>
                 <p className="px-3 py-2 text-sm font-semibold text-foreground">Kaggle</p>
                 <hr className="border-border my-1" />
-                <div className="px-3 py-2 text-xs text-muted-foreground">
-                  Weekly Activity: {streakData?.kaggle?.weekly_activity || 0}
-                </div>
-                <div className="px-3 py-1.5 text-xs text-muted-foreground">
-                  {streakData?.kaggle?.note || "Kaggle integration pending"}
-                </div>
-                <hr className="border-border my-1" />
-                <a href="https://kaggle.com" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-primary transition-colors">
-                  Open Kaggle Profile →
-                </a>
+                {hasKaggle ? (
+                  <>
+                    <div className="px-3 py-2">
+                      <p className="text-xs text-muted-foreground mb-1">7 Day Streak</p>
+                      <StreakDots days={kaggleDots} />
+                    </div>
+                    <div className="px-3 py-1.5 flex justify-between text-xs">
+                      <span className="text-muted-foreground">Weekly Activity</span>
+                      <span className="font-medium text-foreground">{streakData?.kaggle?.weekly_activity || 0}</span>
+                    </div>
+                    <hr className="border-border my-1" />
+                    <a href={profile?.kaggle_url || "https://kaggle.com"} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-primary transition-colors">
+                      <ExternalLink className="h-3.5 w-3.5" /> Open Kaggle
+                    </a>
+                  </>
+                ) : (
+                  <>
+                    <div className="px-3 py-3 text-xs text-muted-foreground">No Kaggle profile linked yet.</div>
+                    <Link to="/add-platform" onClick={() => setKaggleOpen(false)} className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-secondary text-sm text-primary transition-colors">
+                      <Plus className="h-3.5 w-3.5" /> Add Kaggle
+                    </Link>
+                  </>
+                )}
               </Dropdown>
             </div>
 
