@@ -14,391 +14,369 @@ export type Database = {
   }
   public: {
     Tables: {
-      applications: {
+      feed_likes: {
         Row: {
-          candidate_id: string
-          cover_letter: string | null
           created_at: string
           id: string
-          job_id: string
-          resume_url: string | null
-          status: string | null
-          updated_at: string
+          post_id: string
+          user_id: string
         }
         Insert: {
-          candidate_id: string
-          cover_letter?: string | null
           created_at?: string
           id?: string
-          job_id: string
-          resume_url?: string | null
-          status?: string | null
-          updated_at?: string
+          post_id: string
+          user_id: string
         }
         Update: {
-          candidate_id?: string
-          cover_letter?: string | null
           created_at?: string
           id?: string
-          job_id?: string
-          resume_url?: string | null
-          status?: string | null
-          updated_at?: string
+          post_id?: string
+          user_id?: string
         }
         Relationships: [
           {
-            foreignKeyName: "applications_job_id_fkey"
-            columns: ["job_id"]
+            foreignKeyName: "feed_likes_post_id_fkey"
+            columns: ["post_id"]
             isOneToOne: false
-            referencedRelation: "jobs"
+            referencedRelation: "feed_posts"
             referencedColumns: ["id"]
           },
         ]
       }
-      certificates: {
+      feed_posts: {
         Row: {
+          content: string
           created_at: string
-          credential_url: string | null
           id: string
-          issue_date: string | null
-          issuer: string | null
-          title: string
           user_id: string
         }
         Insert: {
+          content: string
           created_at?: string
-          credential_url?: string | null
           id?: string
-          issue_date?: string | null
-          issuer?: string | null
-          title: string
           user_id: string
         }
         Update: {
+          content?: string
           created_at?: string
-          credential_url?: string | null
           id?: string
-          issue_date?: string | null
-          issuer?: string | null
-          title?: string
           user_id?: string
         }
         Relationships: []
       }
-      companies: {
+      group_members: {
         Row: {
-          created_at: string
-          description: string | null
-          email: string | null
+          group_id: string
           id: string
-          industry: string | null
-          location: string | null
-          logo_url: string | null
-          name: string
-          size: string | null
-          updated_at: string
+          joined_at: string
           user_id: string
-          website: string | null
         }
         Insert: {
-          created_at?: string
-          description?: string | null
-          email?: string | null
+          group_id: string
           id?: string
-          industry?: string | null
-          location?: string | null
-          logo_url?: string | null
-          name: string
-          size?: string | null
-          updated_at?: string
+          joined_at?: string
           user_id: string
-          website?: string | null
         }
         Update: {
-          created_at?: string
-          description?: string | null
-          email?: string | null
+          group_id?: string
           id?: string
-          industry?: string | null
-          location?: string | null
-          logo_url?: string | null
+          joined_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_members_group_id_fkey"
+            columns: ["group_id"]
+            isOneToOne: false
+            referencedRelation: "groups"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      groups: {
+        Row: {
+          category: string
+          created_at: string
+          created_by: string
+          id: string
+          name: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          created_by: string
+          id?: string
+          name: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          created_by?: string
+          id?: string
           name?: string
-          size?: string | null
-          updated_at?: string
-          user_id?: string
-          website?: string | null
         }
         Relationships: []
       }
-      education: {
+      habit_completions: {
         Row: {
+          completed: boolean
           created_at: string
-          degree: string | null
-          end_date: string | null
-          field_of_study: string | null
+          date: string
+          habit_id: string
           id: string
-          school: string
-          start_date: string | null
           user_id: string
         }
         Insert: {
+          completed?: boolean
           created_at?: string
-          degree?: string | null
-          end_date?: string | null
-          field_of_study?: string | null
+          date: string
+          habit_id: string
           id?: string
-          school: string
-          start_date?: string | null
           user_id: string
         }
         Update: {
+          completed?: boolean
           created_at?: string
-          degree?: string | null
-          end_date?: string | null
-          field_of_study?: string | null
+          date?: string
+          habit_id?: string
           id?: string
-          school?: string
-          start_date?: string | null
           user_id?: string
-        }
-        Relationships: []
-      }
-      experience: {
-        Row: {
-          company: string
-          created_at: string
-          description: string | null
-          end_date: string | null
-          id: string
-          is_current: boolean | null
-          location: string | null
-          role: string | null
-          start_date: string | null
-          user_id: string
-        }
-        Insert: {
-          company: string
-          created_at?: string
-          description?: string | null
-          end_date?: string | null
-          id?: string
-          is_current?: boolean | null
-          location?: string | null
-          role?: string | null
-          start_date?: string | null
-          user_id: string
-        }
-        Update: {
-          company?: string
-          created_at?: string
-          description?: string | null
-          end_date?: string | null
-          id?: string
-          is_current?: boolean | null
-          location?: string | null
-          role?: string | null
-          start_date?: string | null
-          user_id?: string
-        }
-        Relationships: []
-      }
-      jobs: {
-        Row: {
-          company_id: string
-          created_at: string
-          description: string | null
-          id: string
-          location: string | null
-          required_skills: string[] | null
-          salary_max: number | null
-          salary_min: number | null
-          status: string | null
-          title: string
-          type: string | null
-          updated_at: string
-        }
-        Insert: {
-          company_id: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          location?: string | null
-          required_skills?: string[] | null
-          salary_max?: number | null
-          salary_min?: number | null
-          status?: string | null
-          title: string
-          type?: string | null
-          updated_at?: string
-        }
-        Update: {
-          company_id?: string
-          created_at?: string
-          description?: string | null
-          id?: string
-          location?: string | null
-          required_skills?: string[] | null
-          salary_max?: number | null
-          salary_min?: number | null
-          status?: string | null
-          title?: string
-          type?: string | null
-          updated_at?: string
         }
         Relationships: [
           {
-            foreignKeyName: "jobs_company_id_fkey"
-            columns: ["company_id"]
+            foreignKeyName: "habit_completions_habit_id_fkey"
+            columns: ["habit_id"]
             isOneToOne: false
-            referencedRelation: "companies"
+            referencedRelation: "habits"
             referencedColumns: ["id"]
           },
         ]
       }
-      notifications: {
+      habits: {
+        Row: {
+          archived: boolean
+          category: string
+          created_at: string
+          frequency: string
+          icon: string
+          id: string
+          name: string
+          target_days: number[]
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          archived?: boolean
+          category?: string
+          created_at?: string
+          frequency?: string
+          icon?: string
+          id?: string
+          name: string
+          target_days?: number[]
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          archived?: boolean
+          category?: string
+          created_at?: string
+          frequency?: string
+          icon?: string
+          id?: string
+          name?: string
+          target_days?: number[]
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      journeys: {
+        Row: {
+          color: string
+          created_at: string
+          description: string
+          id: string
+          name: string
+          start_date: string
+          target_days: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          color?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name: string
+          start_date?: string
+          target_days?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          color?: string
+          created_at?: string
+          description?: string
+          id?: string
+          name?: string
+          start_date?: string
+          target_days?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      mood_entries: {
         Row: {
           created_at: string
+          date: string
           id: string
-          message: string | null
-          read: boolean | null
-          title: string
-          type: string | null
+          label: string
+          mood: number
           user_id: string
         }
         Insert: {
           created_at?: string
+          date: string
           id?: string
-          message?: string | null
-          read?: boolean | null
-          title: string
-          type?: string | null
+          label?: string
+          mood: number
           user_id: string
         }
         Update: {
           created_at?: string
+          date?: string
           id?: string
-          message?: string | null
-          read?: boolean | null
-          title?: string
-          type?: string | null
+          label?: string
+          mood?: number
           user_id?: string
         }
         Relationships: []
       }
       profiles: {
         Row: {
-          about: string | null
-          avatar_url: string | null
-          bio: string | null
+          badges: string[]
           created_at: string
-          currently_learning: string | null
-          full_name: string | null
-          github_url: string | null
+          display_name: string
+          freezes: number
           id: string
-          kaggle_url: string | null
-          leetcode_url: string | null
-          location: string | null
-          open_to_work: boolean | null
-          portfolio_url: string | null
-          seeking_type: string | null
+          level: number
           updated_at: string
           user_id: string
-          work_mode: string | null
+          xp: number
         }
         Insert: {
-          about?: string | null
-          avatar_url?: string | null
-          bio?: string | null
+          badges?: string[]
           created_at?: string
-          currently_learning?: string | null
-          full_name?: string | null
-          github_url?: string | null
+          display_name?: string
+          freezes?: number
           id?: string
-          kaggle_url?: string | null
-          leetcode_url?: string | null
-          location?: string | null
-          open_to_work?: boolean | null
-          portfolio_url?: string | null
-          seeking_type?: string | null
+          level?: number
           updated_at?: string
           user_id: string
-          work_mode?: string | null
+          xp?: number
         }
         Update: {
-          about?: string | null
-          avatar_url?: string | null
-          bio?: string | null
+          badges?: string[]
           created_at?: string
-          currently_learning?: string | null
-          full_name?: string | null
-          github_url?: string | null
+          display_name?: string
+          freezes?: number
           id?: string
-          kaggle_url?: string | null
-          leetcode_url?: string | null
-          location?: string | null
-          open_to_work?: boolean | null
-          portfolio_url?: string | null
-          seeking_type?: string | null
+          level?: number
           updated_at?: string
           user_id?: string
-          work_mode?: string | null
+          xp?: number
         }
         Relationships: []
       }
-      projects: {
+      screen_time_entries: {
         Row: {
+          category: string
           created_at: string
-          description: string | null
-          github_url: string | null
+          date: string
+          hours: number
           id: string
-          tech_stack: string[] | null
-          title: string
-          url: string | null
+          minutes: number
           user_id: string
         }
         Insert: {
+          category?: string
           created_at?: string
-          description?: string | null
-          github_url?: string | null
+          date: string
+          hours?: number
           id?: string
-          tech_stack?: string[] | null
-          title: string
-          url?: string | null
+          minutes?: number
           user_id: string
         }
         Update: {
+          category?: string
           created_at?: string
-          description?: string | null
-          github_url?: string | null
+          date?: string
+          hours?: number
           id?: string
-          tech_stack?: string[] | null
-          title?: string
-          url?: string | null
+          minutes?: number
           user_id?: string
         }
         Relationships: []
       }
-      skills: {
+      sleep_entries: {
         Row: {
+          bedtime: string
           created_at: string
+          date: string
           id: string
-          level: string | null
-          name: string
+          notes: string
+          quality: number
           user_id: string
+          wake_up: string
         }
         Insert: {
+          bedtime?: string
           created_at?: string
+          date: string
           id?: string
-          level?: string | null
-          name: string
+          notes?: string
+          quality?: number
           user_id: string
+          wake_up?: string
         }
         Update: {
+          bedtime?: string
           created_at?: string
+          date?: string
           id?: string
-          level?: string | null
-          name?: string
+          notes?: string
+          quality?: number
           user_id?: string
+          wake_up?: string
+        }
+        Relationships: []
+      }
+      user_settings: {
+        Row: {
+          id: string
+          notifications: boolean
+          reminder_time: string
+          updated_at: string
+          user_id: string
+          week_start: string
+        }
+        Insert: {
+          id?: string
+          notifications?: boolean
+          reminder_time?: string
+          updated_at?: string
+          user_id: string
+          week_start?: string
+        }
+        Update: {
+          id?: string
+          notifications?: boolean
+          reminder_time?: string
+          updated_at?: string
+          user_id?: string
+          week_start?: string
         }
         Relationships: []
       }
