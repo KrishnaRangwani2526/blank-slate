@@ -92,16 +92,14 @@ const ProfileHeader = ({ profile, refetch, onAddEducation, onAddProject, onAddCe
     refetch();
   };
 
-  const uploadImage = async (file: File, bucket: "avatars" | "covers", field: "avatar_url" | "cover_url") => {
+  const uploadImage = async (file: File, bucket: "avatars" | "covers", field: "avatar_url") => {
     if (!user) return;
     const ext = file.name.split(".").pop();
     const path = `${user.id}/${Date.now()}.${ext}`;
     const { error } = await supabase.storage.from(bucket).upload(path, file, { upsert: true });
     if (error) return;
     const { data: { publicUrl } } = supabase.storage.from(bucket).getPublicUrl(path);
-    await supabase.from("profiles").update(
-      field === "avatar_url" ? { avatar_url: publicUrl } : { cover_url: publicUrl }
-    ).eq("user_id", user.id);
+    await supabase.from("profiles").update({ avatar_url: publicUrl }).eq("user_id", user.id);
     refetch();
   };
 
@@ -109,13 +107,13 @@ const ProfileHeader = ({ profile, refetch, onAddEducation, onAddProject, onAddCe
     <>
       <div className="bg-card rounded-lg border overflow-visible animate-fade-in">
         <div className="relative h-48 md:h-56">
-          <img src={profile?.cover_url || coverImg} alt="Cover" className="w-full h-full object-cover rounded-t-lg" />
+          <img src={coverImg} alt="Cover" className="w-full h-full object-cover rounded-t-lg" />
           {isOwner && (
             <>
               <button onClick={() => coverRef.current?.click()} className="absolute top-3 right-3 bg-card/80 backdrop-blur p-2 rounded-full hover:bg-card transition-colors">
                 <Camera className="h-4 w-4 text-card-foreground" />
               </button>
-              <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], "covers", "cover_url")} />
+              <input ref={coverRef} type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && uploadImage(e.target.files[0], "avatars", "avatar_url")} />
             </>
           )}
         </div>

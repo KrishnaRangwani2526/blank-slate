@@ -23,12 +23,12 @@ export function NotificationsDropdown() {
 
   const markRead = useMutation({
     mutationFn: async (id: string) => {
-      await supabase.from("notifications").update({ is_read: true }).eq("id", id);
+      await supabase.from("notifications").update({ read: true }).eq("id", id);
     },
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
 
   return (
     <DropdownMenu>
@@ -49,8 +49,8 @@ export function NotificationsDropdown() {
           notifications.map((n) => (
             <DropdownMenuItem
               key={n.id}
-              className={`flex flex-col items-start gap-1 p-3 ${!n.is_read ? "bg-accent/50" : ""}`}
-              onClick={() => !n.is_read && markRead.mutate(n.id)}
+              className={`flex flex-col items-start gap-1 p-3 ${!n.read ? "bg-accent/50" : ""}`}
+              onClick={() => !n.read && markRead.mutate(n.id)}
             >
               <span className="text-sm">{n.message}</span>
               <span className="text-xs text-muted-foreground">

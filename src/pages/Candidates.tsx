@@ -16,15 +16,14 @@ export default function Candidates() {
   const { data: candidates = [], isLoading } = useQuery({
     queryKey: ["candidates"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("candidates").select("*").order("name");
+      const { data, error } = await supabase.from("profiles").select("*").order("full_name");
       if (error) throw error;
       return data;
     },
   });
 
   const filtered = candidates.filter((c) =>
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    (c.skills || []).some((s) => s.toLowerCase().includes(search.toLowerCase()))
+    (c.full_name || "").toLowerCase().includes(search.toLowerCase())
   );
 
   return (
@@ -54,23 +53,15 @@ export default function Candidates() {
                 <CardContent className="p-5 space-y-3">
                   <div className="flex items-center gap-3">
                     <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center">
-                      <span className="text-sm font-bold text-primary">{candidate.name[0]}</span>
+                      <span className="text-sm font-bold text-primary">{(candidate.full_name || "?")[0]}</span>
                     </div>
                     <div>
-                      <p className="font-heading font-semibold">{candidate.name}</p>
-                      <p className="text-xs text-muted-foreground">{candidate.email}</p>
+                      <p className="font-heading font-semibold">{candidate.full_name || "Unknown"}</p>
+                      <p className="text-xs text-muted-foreground">{candidate.location || ""}</p>
                     </div>
                   </div>
                   {candidate.bio && <p className="text-sm text-muted-foreground line-clamp-2">{candidate.bio}</p>}
-                  <div className="flex flex-wrap gap-1">
-                    {(candidate.skills || []).slice(0, 4).map((skill) => (
-                      <Badge key={skill} variant="secondary" className="text-xs">{skill}</Badge>
-                    ))}
-                    {(candidate.skills || []).length > 4 && (
-                      <Badge variant="secondary" className="text-xs">+{(candidate.skills || []).length - 4}</Badge>
-                    )}
-                  </div>
-                  <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => navigate(`/candidates/${candidate.id}`)}>
+                  <Button variant="outline" size="sm" className="w-full gap-2" onClick={() => navigate(`/candidates/${candidate.user_id}`)}>
                     <Eye className="h-3 w-3" /> View Profile
                   </Button>
                 </CardContent>
