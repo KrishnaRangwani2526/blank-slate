@@ -4,12 +4,13 @@ import { useAuth } from "@/contexts/AuthContext";
 
 export interface CandidateNotification {
   id: string;
-  user_id: string;
+  user_id: string | null;
   created_at: string;
-  read: boolean;
+  is_read: boolean;
   message: string;
-  title: string;
   type: string;
+  company_id: string | null;
+  metadata: any;
 }
 
 export function useNotifications() {

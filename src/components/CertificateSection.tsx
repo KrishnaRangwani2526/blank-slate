@@ -27,14 +27,14 @@ const CertificateSection = forwardRef<{ openAdd: () => void }, Props>(({ certifi
   const resetForm = () => { setTitle(""); setIssuer(""); setIssueDate(""); };
   const openAdd = () => { resetForm(); setAdding(true); };
   const openEdit = (c: Tables<"certificates">) => {
-    setTitle(c.title); setIssuer(c.issuer || ""); setIssueDate(c.issue_date || ""); setEditing(c);
+    setTitle(c.name); setIssuer(c.issuer || ""); setIssueDate(c.issue_date || ""); setEditing(c);
   };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setSaving(true);
-    const data = { title, issuer, issue_date: issueDate || null, user_id: user.id };
+    const data = { name: title, issuer, issue_date: issueDate || null, user_id: user.id };
     if (editing) {
       await supabase.from("certificates").update(data).eq("id", editing.id);
       setEditing(null);
@@ -57,7 +57,7 @@ const CertificateSection = forwardRef<{ openAdd: () => void }, Props>(({ certifi
   const handleExtractSkills = async (cert: Tables<"certificates">) => {
     setExtractingCert(cert.id);
     try {
-      const content = `${cert.title} ${cert.issuer || ""}`.trim();
+      const content = `${cert.name} ${cert.issuer || ""}`.trim();
       if (!content) {
         throw new Error("Certificate has no content to analyze");
       }
@@ -107,7 +107,7 @@ const CertificateSection = forwardRef<{ openAdd: () => void }, Props>(({ certifi
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-card-foreground">{cert.title}</p>
+                    <p className="text-sm font-semibold text-card-foreground">{cert.name}</p>
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-all">
                       <button
                         onClick={() => handleExtractSkills(cert)}

@@ -171,9 +171,9 @@ const ProjectsPage = () => {
                         <span>
                           {new Date(project.created_at).toLocaleDateString()}
                         </span>
-                        {project.url && (
+                        {project.project_link && (
                           <a
-                            href={project.url}
+                            href={project.project_link}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-primary hover:underline"
