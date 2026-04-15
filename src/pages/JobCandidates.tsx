@@ -125,6 +125,17 @@ export default function JobCandidatesPage() {
         c.job_rank = i + 1;
       });
 
+      // Save ranks and ATS scores back to applications table
+      for (const c of ranked) {
+        const app = applications.find((a) => a.user_id === c.candidate_id);
+        if (app) {
+          await supabase
+            .from("applications")
+            .update({ rank: c.job_rank, ats_score: c.ats_score })
+            .eq("id", app.id);
+        }
+      }
+
       setCandidates(ranked);
     } catch (error) {
       console.error("Error fetching candidates:", error);
