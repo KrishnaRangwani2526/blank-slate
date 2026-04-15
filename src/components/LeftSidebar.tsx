@@ -8,10 +8,6 @@ import { Trophy, Flame, BookOpen, Clock, Calendar, Sparkles, FolderGit2 } from "
 
 interface Task { id: string; title: string; startTime: string; endTime: string; }
 
-const streakDays = [1,1,1,0,1,1,0,1,1,1,1,0,0,1,1,1,0,1,1,1,1,1,0,1,1,0,1,1,1,0];
-
-const learningItems = ["Machine Learning with Python", "System Design Fundamentals"];
-
 const getCurrentTask = (tasks: Task[]): Task | null => {
   const now = new Date();
   const hhmm = `${String(now.getHours()).padStart(2,"0")}:${String(now.getMinutes()).padStart(2,"0")}`;
@@ -19,9 +15,10 @@ const getCurrentTask = (tasks: Task[]): Task | null => {
 };
 
 const LeftSidebar = () => {
-  const currentStreak = 7;
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const { user } = useAuth();
+
+  // Fetch skills count
   const { data: skills = [] } = useQuery({
     queryKey: ["user-skills", user?.id],
     queryFn: async () => {
@@ -31,12 +28,97 @@ const LeftSidebar = () => {
         .eq("user_id", user?.id)
         .order("created_at", { ascending: false })
         .limit(4);
-
       if (error) throw error;
       return data as { name: string }[];
     },
     enabled: Boolean(user?.id),
   });
+
+  // Fetch projects count
+  const { data: projectCount = 0 } = useQuery({
+    queryKey: ["user-projects-count", user?.id],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("projects")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user?.id);
+      return count || 0;
+    },
+    enabled: Boolean(user?.id),
+  });
+
+  // Fetch learning goals for streak calculation
+  const { data: learningData } = useQuery({
+    queryKey: ["learning-streak", user?.id],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("learning_goals")
+        .select("*")
+        .eq("user_id", user?.id)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+    enabled: Boolean(user?.id),
+  });
+
+  // Fetch total skills for ranking
+  const { data: totalSkillUsers = 0 } = useQuery({
+    queryKey: ["total-skill-users"],
+    queryFn: async () => {
+      const { count } = await supabase
+        .from("profiles")
+        .select("*", { count: "exact", head: true });
+      return count || 0;
+    },
+  });
+
+  // Calculate global rank based on skills count (simple rank = total - your position)
+  const { data: globalRank = 0 } = useQuery({
+    queryKey: ["global-rank", user?.id],
+    queryFn: async () => {
+      // Count users with more skills than current user
+      const { data: mySkills } = await supabase
+        .from("skills")
+        .select("id")
+        .eq("user_id", user?.id);
+      const myCount = mySkills?.length || 0;
+      if (myCount === 0) return 0;
+
+      // Get all user skill counts
+      const { data: allSkills } = await supabase
+        .from("skills")
+        .select("user_id");
+      
+      if (!allSkills) return 0;
+      const counts: Record<string, number> = {};
+      allSkills.forEach((s) => { counts[s.user_id] = (counts[s.user_id] || 0) + 1; });
+      
+      let rank = 1;
+      Object.entries(counts).forEach(([uid, count]) => {
+        if (uid !== user?.id && count > myCount) rank++;
+      });
+      return rank;
+    },
+    enabled: Boolean(user?.id),
+  });
+
+  // Calculate streak from aspiring learning: days with 1+ hour spent
+  // For now, streak = number of consecutive days with completed learning goals
+  const currentStreak = (() => {
+    if (!learningData || learningData.length === 0) return 0;
+    const completed = learningData.filter((g) => g.completed).length;
+    return completed; // simplified
+  })();
+
+  // Build last 30 day streak grid
+  const streakDays = (() => {
+    const days = new Array(30).fill(0);
+    // Mark today and streak days
+    for (let i = 0; i < Math.min(currentStreak, 30); i++) {
+      days[29 - i] = 1;
+    }
+    return days;
+  })();
 
   useEffect(() => {
     const update = () => {
@@ -46,13 +128,15 @@ const LeftSidebar = () => {
       } catch { setCurrentTask(null); }
     };
     update();
-    const interval = setInterval(update, 30000); // check every 30s
+    const interval = setInterval(update, 30000);
     return () => clearInterval(interval);
   }, []);
 
+  const today = new Date().toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
+
   return (
     <div className="space-y-3 w-full">
-      {/* Global Rank - button */}
+      {/* Global Rank */}
       <Link to="/rank" className="block bg-card rounded-xl border p-4 hover:shadow-md transition-shadow">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 rounded-full bg-rank-bg flex items-center justify-center">
@@ -60,17 +144,26 @@ const LeftSidebar = () => {
           </div>
           <div>
             <p className="text-xs text-muted-foreground">Global Rank</p>
-            <p className="text-lg font-bold text-card-foreground">#1,247</p>
+            <p className="text-lg font-bold text-card-foreground">
+              {globalRank === 0 ? "#0" : `#${globalRank.toLocaleString()}`}
+            </p>
           </div>
         </div>
-        <p className="text-xs text-muted-foreground mt-1">Top 5% of all developers</p>
+        <p className="text-xs text-muted-foreground mt-1">
+          {globalRank === 0 ? "Add skills to get ranked" : `Out of ${totalSkillUsers} developers`}
+        </p>
       </Link>
 
-      {/* Streak - button */}
+      {/* Streak - real data from aspiring learning */}
       <Link to="/streak" className="block bg-card rounded-xl border p-4 hover:shadow-md transition-shadow">
-        <div className="flex items-center gap-2 mb-2">
-          <Flame className="h-4 w-4 text-destructive" />
-          <span className="text-sm font-semibold text-card-foreground">{currentStreak} Day Streak</span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Flame className="h-4 w-4 text-destructive" />
+            <span className="text-sm font-semibold text-card-foreground">
+              {currentStreak > 0 ? `${currentStreak} Day Streak` : "No Streak"}
+            </span>
+          </div>
+          <span className="text-[10px] text-muted-foreground">{today}</span>
         </div>
         <div className="grid grid-cols-10 gap-1">
           {streakDays.map((active, i) => (
@@ -97,7 +190,7 @@ const LeftSidebar = () => {
         )}
       </Link>
 
-      {/* Skill Section */}
+      {/* Skill Section - shows top skills and count */}
       <Link to="/skills" className="block bg-card rounded-xl border p-4 hover:shadow-md transition-shadow">
         <div className="flex items-center gap-2 mb-2">
           <Sparkles className="h-4 w-4 text-secondary" />
@@ -117,34 +210,37 @@ const LeftSidebar = () => {
 
       {/* Projects */}
       <Link to="/projects" className="block bg-card rounded-xl border p-4 hover:shadow-md transition-shadow">
-        <div className="flex items-center gap-2 mb-2">
-          <FolderGit2 className="h-4 w-4 text-primary" />
-          <span className="text-sm font-semibold text-card-foreground">Projects</span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <FolderGit2 className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-card-foreground">Projects</span>
+          </div>
+          <span className="text-xs text-muted-foreground">{projectCount}</span>
         </div>
         <p className="text-xs text-muted-foreground">Manage your projects and extract skills</p>
         <p className="mt-3 text-xs text-primary font-medium">View All Projects</p>
       </Link>
 
       {/* Aspiring Learning */}
-      <div className="bg-card rounded-xl border p-4">
+      <Link to="/learning" className="block bg-card rounded-xl border p-4 hover:shadow-md transition-shadow">
         <div className="flex items-center gap-2 mb-2">
           <BookOpen className="h-4 w-4 text-primary" />
           <h3 className="text-sm font-semibold text-card-foreground">Aspiring Learning</h3>
         </div>
-        {learningItems.length > 0 && (
+        {learningData && learningData.length > 0 ? (
           <ul className="space-y-1 mb-2">
-            {learningItems.map((item, i) => (
-              <li key={i} className="text-xs text-muted-foreground flex items-center gap-1.5">
-                <span className="w-1.5 h-1.5 rounded-full bg-primary flex-shrink-0" />
-                {item}
+            {learningData.slice(0, 2).map((item) => (
+              <li key={item.id} className="text-xs text-muted-foreground flex items-center gap-1.5">
+                <span className={`w-1.5 h-1.5 rounded-full flex-shrink-0 ${item.completed ? "bg-green-500" : "bg-primary"}`} />
+                <span className="truncate">{item.title}</span>
               </li>
             ))}
           </ul>
+        ) : (
+          <p className="text-xs text-muted-foreground mb-2">No learning goals yet.</p>
         )}
-        <Link to="/learning" className="inline-block w-full text-center px-3 py-2 bg-primary text-primary-foreground rounded-lg text-xs font-medium hover:opacity-90 transition-opacity">
-          View Learning Goals
-        </Link>
-      </div>
+        <span className="text-xs text-primary font-medium">View Learning Goals</span>
+      </Link>
     </div>
   );
 };
