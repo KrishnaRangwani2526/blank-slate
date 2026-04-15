@@ -169,16 +169,11 @@ const ProjectsPage = () => {
 
                       <div className="flex items-center justify-between text-xs text-muted-foreground">
                         <span>
-                          {project.start_date && project.end_date
-                            ? `${project.start_date} - ${project.end_date}`
-                            : project.start_date
-                            ? `Started ${project.start_date}`
-                            : "Date not specified"
-                          }
+                          {new Date(project.created_at).toLocaleDateString()}
                         </span>
-                        {project.project_link && (
+                        {project.url && (
                           <a
-                            href={project.project_link}
+                            href={project.url}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="flex items-center gap-1 text-primary hover:underline"
