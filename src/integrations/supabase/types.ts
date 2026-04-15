@@ -321,6 +321,8 @@ export type Database = {
           description: string | null
           end_date: string | null
           id: string
+          is_current: boolean | null
+          location: string | null
           role: string
           start_date: string | null
           user_id: string
@@ -331,6 +333,8 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          is_current?: boolean | null
+          location?: string | null
           role?: string
           start_date?: string | null
           user_id: string
@@ -341,6 +345,8 @@ export type Database = {
           description?: string | null
           end_date?: string | null
           id?: string
+          is_current?: boolean | null
+          location?: string | null
           role?: string
           start_date?: string | null
           user_id?: string
@@ -783,9 +789,12 @@ export type Database = {
           leetcode_url: string | null
           level: number
           location: string | null
+          open_to_work: boolean | null
           phone: string | null
+          seeking_type: string | null
           updated_at: string
           user_id: string
+          work_mode: string | null
           xp: number
         }
         Insert: {
@@ -803,9 +812,12 @@ export type Database = {
           leetcode_url?: string | null
           level?: number
           location?: string | null
+          open_to_work?: boolean | null
           phone?: string | null
+          seeking_type?: string | null
           updated_at?: string
           user_id: string
+          work_mode?: string | null
           xp?: number
         }
         Update: {
@@ -823,9 +835,12 @@ export type Database = {
           leetcode_url?: string | null
           level?: number
           location?: string | null
+          open_to_work?: boolean | null
           phone?: string | null
+          seeking_type?: string | null
           updated_at?: string
           user_id?: string
+          work_mode?: string | null
           xp?: number
         }
         Relationships: []
