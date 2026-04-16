@@ -1,4 +1,4 @@
-// extract-skills edge function - v2
+// extract-skills edge function - v2 (sync redeploy)
 import { corsHeaders } from '@supabase/supabase-js/cors'
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");

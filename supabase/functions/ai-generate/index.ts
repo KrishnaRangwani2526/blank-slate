@@ -1,4 +1,4 @@
-// ai-generate edge function - routes AI calls through Lovable AI Gateway
+// ai-generate edge function - routes AI calls through Lovable AI Gateway (sync redeploy)
 import { corsHeaders } from '@supabase/supabase-js/cors'
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
