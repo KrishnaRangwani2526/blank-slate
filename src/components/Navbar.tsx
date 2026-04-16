@@ -83,16 +83,16 @@ const Navbar = () => {
         <div className="max-w-7xl mx-auto flex items-center justify-between px-4 h-14">
           <div className="flex items-center gap-3">
             <Link to="/" className="text-primary font-bold text-xl tracking-tight">DevConnect</Link>
-            <div className="relative hidden sm:block">
+            <form className="relative hidden sm:block" onSubmit={(e) => { e.preventDefault(); if (searchQuery.trim()) navigate(`/search?q=${encodeURIComponent(searchQuery.trim())}`); }}>
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <input
                 type="text"
-                placeholder="Search..."
+                placeholder="Search candidates..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-4 py-1.5 rounded-lg bg-secondary text-secondary-foreground text-sm w-56 focus:outline-none focus:ring-2 focus:ring-ring transition-all"
               />
-            </div>
+            </form>
           </div>
 
           <div className="flex items-center gap-0.5">
