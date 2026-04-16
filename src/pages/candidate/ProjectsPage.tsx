@@ -146,7 +146,7 @@ const ProjectsPage = () => {
               </div>
               <div className="flex gap-2">
                 <Button onClick={() => { setShowRepoForm(true); setShowProjectForm(false); }} variant="outline" className="gap-1.5">
-                  <Github className="h-4 w-4" /> Add GitHub Repo
+                  <GitBranch className="h-4 w-4" /> Add GitHub Repo
                 </Button>
                 <Button onClick={() => { setShowProjectForm(true); setShowRepoForm(false); }} className="gap-1.5">
                   <Plus className="h-4 w-4" /> Add Project
@@ -157,7 +157,7 @@ const ProjectsPage = () => {
             {/* Add Repo Form */}
             {showRepoForm && (
               <FormCard
-                title="Add GitHub Repo" icon={Github} form={repoForm} setForm={setRepoForm}
+                title="Add GitHub Repo" icon={GitBranch} form={repoForm} setForm={setRepoForm}
                 onSave={handleAddRepo} onCancel={() => setShowRepoForm(false)} linkLabel="GitHub Repo Link"
               />
             )}
@@ -185,7 +185,7 @@ const ProjectsPage = () => {
                     <CardContent className="p-5">
                       <div className="flex items-start justify-between mb-2">
                         <div className="flex items-center gap-2">
-                          {project.github_link ? <Github className="h-4 w-4 text-muted-foreground" /> : <FolderGit2 className="h-4 w-4 text-muted-foreground" />}
+                          {project.github_link ? <GitBranch className="h-4 w-4 text-muted-foreground" /> : <FolderGit2 className="h-4 w-4 text-muted-foreground" />}
                           <h3 className="text-base font-semibold text-foreground">{project.title}</h3>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => handleDeleteProject(project.id)} disabled={deletingProj === project.id} className="h-8 w-8 p-0 text-destructive hover:text-destructive">
