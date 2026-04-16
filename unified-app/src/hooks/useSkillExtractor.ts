@@ -21,14 +21,24 @@ export const useSkillExtractor = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const extractSkills = async (content: string) => {
+  const extractSkills = async (content: string, file?: File) => {
     setIsLoading(true);
     setError(null);
     setResult(null);
 
     try {
+      let body: Record<string, string> = { content };
+
+      // If a file is provided, convert to base64 and include it
+      if (file) {
+        const base64 = await fileToBase64(file);
+        body.file_base64 = base64;
+        body.file_type = file.type;
+        body.file_name = file.name;
+      }
+
       const { data, error: fnError } = await supabase.functions.invoke("extract-skills", {
-        body: { content },
+        body,
       });
 
       if (fnError) {
@@ -73,3 +83,17 @@ export const useSkillExtractor = () => {
     reset,
   };
 };
+
+function fileToBase64(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      // Remove the data:...;base64, prefix
+      const base64 = result.split(",")[1];
+      resolve(base64);
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
