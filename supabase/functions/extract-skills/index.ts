@@ -1,4 +1,4 @@
-// extract-skills edge function - v3
+// extract-skills edge function — deployed 2026-04-16T08:15Z
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
