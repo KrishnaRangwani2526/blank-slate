@@ -529,6 +529,8 @@ export type Database = {
           github_url: string | null
           headline: string | null
           id: string
+          kaggle_url: string | null
+          leetcode_url: string | null
           linkedin_url: string | null
           location: string | null
           open_to_work: boolean | null
@@ -551,6 +553,8 @@ export type Database = {
           github_url?: string | null
           headline?: string | null
           id?: string
+          kaggle_url?: string | null
+          leetcode_url?: string | null
           linkedin_url?: string | null
           location?: string | null
           open_to_work?: boolean | null
@@ -573,6 +577,8 @@ export type Database = {
           github_url?: string | null
           headline?: string | null
           id?: string
+          kaggle_url?: string | null
+          leetcode_url?: string | null
           linkedin_url?: string | null
           location?: string | null
           open_to_work?: boolean | null
