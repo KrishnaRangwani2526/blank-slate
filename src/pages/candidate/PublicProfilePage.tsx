@@ -298,9 +298,9 @@ const PublicProfilePage = () => {
                       )}
                     </div>
                     {p.description && <p className="text-sm text-foreground/80 mb-3">{p.description}</p>}
-                    {p.tech_stack?.length > 0 && (
+                    {Array.isArray(p.tech_stack) && (p.tech_stack as string[]).length > 0 && (
                       <div className="flex flex-wrap gap-1.5 mb-4">
-                        {p.tech_stack.map(t => <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>)}
+                        {(p.tech_stack as string[]).map((t: string) => <Badge key={t} variant="outline" className="text-[10px]">{t}</Badge>)}
                       </div>
                     )}
 

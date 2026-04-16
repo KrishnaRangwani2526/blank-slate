@@ -30,8 +30,8 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
 
   const openAdd = () => { resetForm(); setAdding(true); };
   const openEdit = (p: Tables<"projects">) => {
-    setTitle(p.title); setDescription(p.description || ""); setLink(p.project_link || "");
-    setTechStack((p.tech_stack || []).join(", ")); setStartDate(""); setEndDate("");
+    setTitle(p.title || ""); setDescription(p.description || ""); setLink(p.url || "");
+    setTechStack(Array.isArray(p.tech_stack) ? (p.tech_stack as string[]).join(", ") : ""); setStartDate(""); setEndDate("");
     setEditing(p);
   };
 
@@ -40,8 +40,8 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
     if (!user) return;
     setSaving(true);
     const data = {
-      title, description, project_link: link,
-      tech_stack: techStack.split(",").map(s => s.trim()).filter(Boolean),
+      title, description, url: link,
+      tech_stack: techStack.split(",").map(s => s.trim()).filter(Boolean) as unknown as any,
       user_id: user.id,
     };
 
@@ -67,7 +67,8 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
   const handleExtractSkills = async (project: Tables<"projects">) => {
     setExtractingProj(project.id);
     try {
-      const content = `${project.title} ${project.description || ""} ${project.tech_stack?.join(" ") || ""}`.trim();
+      const ts = Array.isArray(project.tech_stack) ? (project.tech_stack as string[]).join(" ") : "";
+      const content = `${project.title} ${project.description || ""} ${ts}`.trim();
       if (!content) {
         throw new Error("Project has no content to analyze");
       }
@@ -133,8 +134,8 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <p className="text-sm font-semibold text-card-foreground">{project.title}</p>
-                    {project.project_link && (
-                      <a href={project.project_link} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
+                    {project.url && (
+                      <a href={project.url} target="_blank" rel="noopener noreferrer" className="text-muted-foreground hover:text-primary">
                         <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     )}
@@ -155,10 +156,10 @@ const ProjectSection = forwardRef<{ openAdd: () => void }, Props>(({ projects, r
                     </div>
                   </div>
                   {project.description && <p className="text-xs text-muted-foreground mt-0.5">{project.description}</p>}
-                  {project.tech_stack && project.tech_stack.length > 0 && (
+                  {Array.isArray(project.tech_stack) && (project.tech_stack as string[]).length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      {project.tech_stack.map((t) => (
-                        <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium">{t}</span>
+                      {(project.tech_stack as string[]).map((t: string) => (
+                        <span key={t} className="text-xs px-2 py-0.5 rounded-full bg-secondary text-secondary-foreground font-medium">{t as string}</span>
                       ))}
                     </div>
                   )}
