@@ -262,6 +262,7 @@ export type Database = {
           department: string | null
           email: string | null
           id: string
+          joined_at: string | null
           name: string | null
           role: string | null
           status: string | null
@@ -272,6 +273,7 @@ export type Database = {
           department?: string | null
           email?: string | null
           id?: string
+          joined_at?: string | null
           name?: string | null
           role?: string | null
           status?: string | null
@@ -282,6 +284,7 @@ export type Database = {
           department?: string | null
           email?: string | null
           id?: string
+          joined_at?: string | null
           name?: string | null
           role?: string | null
           status?: string | null
@@ -495,6 +498,7 @@ export type Database = {
           id: string
           is_read: boolean | null
           message: string | null
+          metadata: Json | null
           type: string | null
           user_id: string
         }
@@ -503,6 +507,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message?: string | null
+          metadata?: Json | null
           type?: string | null
           user_id: string
         }
@@ -511,6 +516,7 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message?: string | null
+          metadata?: Json | null
           type?: string | null
           user_id?: string
         }
