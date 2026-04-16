@@ -1,7 +1,8 @@
+// extract-skills edge function - v2
 import { corsHeaders } from '@supabase/supabase-js/cors'
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions"; // synced with active project
+const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
