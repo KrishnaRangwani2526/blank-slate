@@ -25,6 +25,8 @@ import CandidateATSScore from './pages/candidate/ATSScorePage';
 import CandidateResume from './pages/candidate/ResumePage';
 import CandidateNetwork from './pages/candidate/NetworkPage';
 import CandidateSettings from './pages/candidate/SettingsPage';
+import CandidateSearch from './pages/candidate/SearchPage';
+import CandidatePublicProfile from './pages/candidate/PublicProfilePage';
 
 // HR pages
 import HRDashboard from './pages/Dashboard';
