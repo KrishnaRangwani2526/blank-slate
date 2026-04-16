@@ -1,4 +1,8 @@
-import { corsHeaders } from '@supabase/supabase-js/cors'
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
 const GATEWAY_URL = "https://ai.gateway.lovable.dev/v1/chat/completions";
@@ -10,8 +14,10 @@ Deno.serve(async (req) => {
 
   try {
     const { content } = await req.json();
-    if (!content || typeof content !== "string") {
-      return new Response(JSON.stringify({ error: "Content is required" }), {
+    const file_base64 = (await req.clone().json().catch(() => ({}))).file_base64;
+    const file_type = (await req.clone().json().catch(() => ({}))).file_type;
+    if (!content && !file_base64) {
+      return new Response(JSON.stringify({ error: "Content or file is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
