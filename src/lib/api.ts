@@ -76,8 +76,8 @@ export const rankingApi = {
       const userSkills = (allSkills || []).filter(s => s.user_id === profile.user_id);
       if (userSkills && userSkills.length > 0) {
         skillNames = userSkills.map(s => s.name);
-      } else if (profile.skills && Array.isArray(profile.skills)) {
-        skillNames = profile.skills;
+      } else if ((profile as any).skills && Array.isArray((profile as any).skills)) {
+        skillNames = (profile as any).skills;
       }
       return {
         id: profile.user_id,
