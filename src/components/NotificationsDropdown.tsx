@@ -1,4 +1,4 @@
-import { Bell } from "lucide-react";
+import { Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -28,6 +28,13 @@ export function NotificationsDropdown() {
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
   });
 
+  const deleteNotification = useMutation({
+    mutationFn: async (id: string) => {
+      await supabase.from("notifications").delete().eq("id", id);
+    },
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["notifications"] }),
+  });
+
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
@@ -49,13 +56,29 @@ export function NotificationsDropdown() {
           notifications.map((n) => (
             <DropdownMenuItem
               key={n.id}
-              className={`flex flex-col items-start gap-1 p-3 ${!n.is_read ? "bg-accent/50" : ""}`}
-              onClick={() => !n.is_read && markRead.mutate(n.id)}
+              className={`flex items-start justify-between gap-2 p-3 ${!n.is_read ? "bg-accent/50" : ""}`}
+              onClick={(e) => {
+                if (!(e.target as Element).closest(".delete-btn")) {
+                  if (!n.is_read) markRead.mutate(n.id);
+                }
+              }}
             >
-              <span className="text-sm">{n.message}</span>
-              <span className="text-xs text-muted-foreground">
-                {new Date(n.created_at).toLocaleDateString()}
-              </span>
+              <div className="flex flex-col gap-1">
+                <span className="text-sm">{n.message}</span>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(n.created_at).toLocaleDateString()}
+                </span>
+              </div>
+              <div 
+                className="delete-btn p-1.5 rounded-md text-muted-foreground hover:bg-destructive/10 hover:text-destructive cursor-pointer transition-colors"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                  deleteNotification.mutate(n.id);
+                }}
+              >
+                <X className="h-3 w-3" />
+              </div>
             </DropdownMenuItem>
           ))
         )}

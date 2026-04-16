@@ -78,7 +78,7 @@ export default function JobCandidatesPage() {
         return;
       }
 
-      const userIds = applications.map((a) => a.user_id);
+      const userIds = applications.map((a) => a.candidate_id);
 
       // Fetch profiles and skills for applicants
       const [profilesRes, skillsRes] = await Promise.all([
@@ -127,7 +127,7 @@ export default function JobCandidatesPage() {
 
       // Save ranks and ATS scores back to applications table
       for (const c of ranked) {
-        const app = applications.find((a) => a.user_id === c.candidate_id);
+        const app = applications.find((a) => a.candidate_id === c.candidate_id);
         if (app) {
           await supabase
             .from("applications")

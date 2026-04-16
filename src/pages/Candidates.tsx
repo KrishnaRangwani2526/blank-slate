@@ -2,12 +2,12 @@ import { DashboardLayout } from "@/components/DashboardLayout";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { Search, Eye, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 
 export default function Candidates() {
@@ -23,29 +23,26 @@ export default function Candidates() {
     },
   });
 
-  const queryClient = useQueryClient();
+  const [deletedIds, setDeletedIds] = useState<string[]>([]);
 
-  const deleteCandidate = useMutation({
-    mutationFn: async (id: string) => {
-      // For mock testing/admin purposes, attempt to delete the profile
-      const { error, count } = await supabase
-        .from("profiles")
-        .delete({ count: 'exact' })
-        .eq("id", id);
-      
-      if (error) throw error;
-      if (count === 0) throw new Error("Permission denied. Profiles can only be deleted by the owner or admin.");
-    },
-    onSuccess: () => {
-      toast.success("Candidate card permanently removed.");
-      queryClient.invalidateQueries({ queryKey: ["candidates"] });
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to delete candidate.");
+  useEffect(() => {
+    const stored = localStorage.getItem("hr_deleted_candidates");
+    if (stored) {
+      try {
+        setDeletedIds(JSON.parse(stored));
+      } catch (e) {}
     }
-  });
+  }, []);
+
+  const handleDelete = (id: string, name: string) => {
+    const newDeleted = [...deletedIds, id];
+    setDeletedIds(newDeleted);
+    localStorage.setItem("hr_deleted_candidates", JSON.stringify(newDeleted));
+    toast.success(`${name} has been removed from your dashboard.`);
+  };
 
   const filtered = candidates.filter((c) =>
+    !deletedIds.includes(c.id) &&
     (c.full_name || "").toLowerCase().includes(search.toLowerCase())
   );
 
@@ -92,12 +89,7 @@ export default function Candidates() {
                       variant="ghost" 
                       size="sm" 
                       className="text-destructive hover:bg-destructive/10 shrink-0" 
-                      onClick={() => {
-                        if (confirm("Are you sure you want to delete this candidate?")) {
-                          deleteCandidate.mutate(candidate.id);
-                        }
-                      }}
-                      disabled={deleteCandidate.isPending}
+                      onClick={() => handleDelete(candidate.id, candidate.full_name || "Unknown")}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>
