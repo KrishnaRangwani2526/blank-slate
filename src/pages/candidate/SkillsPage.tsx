@@ -1,328 +1,259 @@
 // @ts-nocheck
 import { useState } from "react";
 import Navbar from "@/components/Navbar";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Textarea } from "@/components/ui/textarea";
-import { useSkillExtractor } from "@/hooks/useSkillExtractor";
+import LeftSidebar from "@/components/LeftSidebar";
 import { useProfile } from "@/hooks/useProfile";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Brain, ArrowLeft, Award, FolderGit2, Diamond, TrendingUp, ChevronDown, ChevronUp } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Navigate, Link } from "react-router-dom";
+import { Diamond, ChevronDown, ChevronUp, TrendingUp, Award, FolderGit2, GitBranch, Brain, PieChart } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 const SkillsPage = () => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const { skills, certificates, projects, refetch } = useProfile();
-  const { extractSkills, isLoading, result, reset } = useSkillExtractor();
-  const [content, setContent] = useState("");
-  const [extractingId, setExtractingId] = useState<string | null>(null);
   const [expandedSkill, setExpandedSkill] = useState<string | null>(null);
 
-  // Get universal rank for each skill
-  const { data: skillRanks = {} } = useQuery({
-    queryKey: ["skill-ranks", user?.id, skills.map(s => s.name).join(",")],
+  if (authLoading) return <div className="min-h-screen bg-background flex items-center justify-center"><p className="text-muted-foreground">Loading...</p></div>;
+  if (!user) return <Navigate to="/auth" replace />;
+
+  const totalSkills = skills.length;
+
+  // Fetch universal rank data: for each skill, how many users have it
+  const { data: rankData = {} } = useQuery({
+    queryKey: ["skill-universal-ranks", user?.id, skills.map(s => s.name).join(",")],
     queryFn: async () => {
-      const ranks: Record<string, { rank: number; total: number; usageCount: number }> = {};
-      for (const skill of skills) {
-        // Count how many users have this skill
-        const { count: totalWithSkill } = await supabase
-          .from("skills")
-          .select("*", { count: "exact", head: true })
-          .ilike("name", skill.name);
+      if (skills.length === 0) return {};
+      // Get all skills across all users to compute ranks
+      const { data: allSkills } = await supabase.from("skills").select("name, user_id");
+      if (!allSkills) return {};
 
-        // Count users with MORE skills than the current user who also have this skill
-        // Simplified: rank = position among all users with this skill
-        const { data: usersWithSkill } = await supabase
-          .from("skills")
-          .select("user_id")
-          .ilike("name", skill.name);
+      // Count usage per skill name (case-insensitive)
+      const usageMap: Record<string, number> = {};
+      allSkills.forEach(s => {
+        const key = s.name.toLowerCase();
+        usageMap[key] = (usageMap[key] || 0) + 1;
+      });
 
-        ranks[skill.name] = {
-          rank: 1, // simplified - would need proper ranking logic
-          total: totalWithSkill || 0,
-          usageCount: totalWithSkill || 0,
+      // For universal rank: sort all unique skill names by usage desc, assign rank
+      const sorted = Object.entries(usageMap).sort((a, b) => b[1] - a[1]);
+      const rankMap: Record<string, number> = {};
+      sorted.forEach(([name], i) => { rankMap[name] = i + 1; });
+
+      const result: Record<string, { usageCount: number; universalRank: number; totalUniqueSkills: number }> = {};
+      skills.forEach(s => {
+        const key = s.name.toLowerCase();
+        result[s.name] = {
+          usageCount: usageMap[key] || 1,
+          universalRank: rankMap[key] || 0,
+          totalUniqueSkills: sorted.length,
         };
-      }
-      return ranks;
+      });
+      return result;
     },
     enabled: skills.length > 0,
   });
 
-  // Determine skill source (certificate, project, or extracted)
-  const getSkillSource = (skillName: string) => {
-    const sources: string[] = [];
-    certificates.forEach((cert) => {
-      if (cert.name?.toLowerCase().includes(skillName.toLowerCase())) {
-        sources.push(`Certificate: ${cert.name}`);
+  // Determine where each skill comes from
+  const getSkillSources = (skillName: string) => {
+    const sources: { type: string; icon: any; label: string }[] = [];
+    const lower = skillName.toLowerCase();
+    certificates.forEach(c => {
+      if (c.name?.toLowerCase().includes(lower) || c.issuer?.toLowerCase().includes(lower)) {
+        sources.push({ type: "certificate", icon: Award, label: `Certificate: ${c.name}` });
       }
     });
-    projects.forEach((proj) => {
-      const techStack = proj.tech_stack || [];
-      if (techStack.some((t: string) => t.toLowerCase() === skillName.toLowerCase()) ||
-          proj.title?.toLowerCase().includes(skillName.toLowerCase())) {
-        sources.push(`Project: ${proj.title}`);
+    projects.forEach(p => {
+      const inTech = (p.tech_stack || []).some((t: string) => t.toLowerCase() === lower);
+      const inTitle = p.title?.toLowerCase().includes(lower);
+      const inDesc = p.description?.toLowerCase().includes(lower);
+      if (inTech || inTitle || inDesc) {
+        sources.push({ type: p.github_link ? "git" : "project", icon: p.github_link ? GitBranch : FolderGit2, label: `${p.github_link ? "Repo" : "Project"}: ${p.title}` });
       }
     });
-    if (sources.length === 0) sources.push("Extracted via AI");
+    if (sources.length === 0) sources.push({ type: "ai", icon: Brain, label: "Extracted via AI" });
     return sources;
   };
 
-  const totalSkills = skills.length;
+  // Sort skills by universal rank (most used first)
+  const sortedSkills = [...skills].sort((a, b) => {
+    const ra = rankData[a.name]?.usageCount || 0;
+    const rb = rankData[b.name]?.usageCount || 0;
+    return rb - ra;
+  });
 
-  const handleExtractFromContent = async () => {
-    if (!content.trim()) { toast.error("Please enter some content to analyze"); return; }
-    try {
-      const res = await extractSkills(content);
-      if (res?.skills?.length && user) {
-        const skillsToAdd = res.skills.map((s: any) => ({
-          user_id: user.id, name: s.name, category: s.category || "general", percentage: s.percentage || 50,
-        }));
-        await supabase.from("skills").upsert(skillsToAdd, { onConflict: "user_id,name", ignoreDuplicates: false });
-        refetch();
-        toast.success(`${res.skills.length} skills added!`);
-      }
-    } catch {}
-  };
-
-  const handleExtractFromCert = async (cert: any) => {
-    if (!user) return;
-    setExtractingId(cert.id);
-    try {
-      const text = `${cert.name} ${cert.issuer || ""}`.trim();
-      const res = await extractSkills(text);
-      if (res?.skills?.length) {
-        const skillsToAdd = res.skills.map((s: any) => ({ user_id: user.id, name: s.name }));
-        await supabase.from("skills").upsert(skillsToAdd, { onConflict: "user_id,name", ignoreDuplicates: false });
-        refetch();
-      }
-    } catch {} finally { setExtractingId(null); }
-  };
-
-  const handleExtractFromProject = async (proj: any) => {
-    if (!user) return;
-    setExtractingId(proj.id);
-    try {
-      const text = `${proj.title} ${proj.description || ""} ${(proj.tech_stack || []).join(" ")}`.trim();
-      const res = await extractSkills(text);
-      if (res?.skills?.length) {
-        const skillsToAdd = res.skills.map((s: any) => ({ user_id: user.id, name: s.name }));
-        await supabase.from("skills").upsert(skillsToAdd, { onConflict: "user_id,name", ignoreDuplicates: false });
-        refetch();
-      }
-    } catch {} finally { setExtractingId(null); }
-  };
+  // Category breakdown for analytics
+  const categories = skills.reduce((acc, s) => {
+    const cat = s.category || "other";
+    acc[cat] = (acc[cat] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <div className="max-w-4xl mx-auto px-4 py-10 space-y-6">
-        <div className="flex items-center gap-3">
-          <Link to="/" className="p-2 rounded-md hover:bg-secondary transition-colors">
-            <ArrowLeft className="h-5 w-5 text-foreground" />
-          </Link>
-          <div>
-            <h1 className="text-2xl font-bold text-foreground">Skills Dashboard</h1>
-            <p className="text-sm text-muted-foreground mt-1">
-              {totalSkills} skills · Ranked by usage across all users
+      <div className="max-w-7xl mx-auto px-4 py-6">
+        <div className="flex gap-6">
+          <div className="w-56 md:w-64 flex-shrink-0">
+            <div className="sticky top-20 overflow-y-auto max-h-[calc(100vh-5rem)] scrollbar-hide">
+              <LeftSidebar />
+            </div>
+          </div>
+
+          <div className="flex-1 min-w-0 space-y-4">
+            {/* Header */}
+            <div>
+              <h1 className="text-2xl font-bold text-foreground">Skills Dashboard</h1>
+              <p className="text-sm text-muted-foreground">{totalSkills} skills · Ranked by usage across all developers</p>
+            </div>
+
+            {/* Analytics Summary */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-card rounded-lg border p-4 text-center">
+                <p className="text-2xl font-bold text-foreground">{totalSkills}</p>
+                <p className="text-xs text-muted-foreground">Total Skills</p>
+              </div>
+              <div className="bg-card rounded-lg border p-4 text-center">
+                <p className="text-2xl font-bold text-foreground">{Object.keys(categories).length}</p>
+                <p className="text-xs text-muted-foreground">Categories</p>
+              </div>
+              <div className="bg-card rounded-lg border p-4 text-center">
+                <p className="text-2xl font-bold text-foreground">{categories["language"] || 0}</p>
+                <p className="text-xs text-muted-foreground">Languages</p>
+              </div>
+              <div className="bg-card rounded-lg border p-4 text-center">
+                <p className="text-2xl font-bold text-foreground">{categories["framework"] || 0}</p>
+                <p className="text-xs text-muted-foreground">Frameworks</p>
+              </div>
+            </div>
+
+            {/* Percentage Analytics - category breakdown */}
+            {totalSkills > 0 && (
+              <div className="bg-card rounded-lg border p-5">
+                <h2 className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                  <PieChart className="h-4 w-4 text-primary" /> Category Breakdown
+                </h2>
+                <div className="space-y-2">
+                  {Object.entries(categories).sort((a, b) => b[1] - a[1]).map(([cat, count]) => {
+                    const pct = Math.round((count / totalSkills) * 100);
+                    return (
+                      <div key={cat} className="space-y-1">
+                        <div className="flex items-center justify-between text-xs">
+                          <span className="text-foreground capitalize">{cat}</span>
+                          <span className="text-muted-foreground">{count} ({pct}%)</span>
+                        </div>
+                        <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                          <div className="h-full bg-primary rounded-full transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Ranked Skill List */}
+            <div className="bg-card rounded-lg border">
+              <div className="p-5 border-b">
+                <h2 className="text-base font-semibold text-foreground flex items-center gap-2">
+                  <Diamond className="h-4 w-4 text-primary" /> Skills Ranked by Usage
+                </h2>
+              </div>
+              {sortedSkills.length === 0 ? (
+                <div className="p-8 text-center">
+                  <Diamond className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-sm text-muted-foreground">No skills yet.</p>
+                  <p className="text-xs text-muted-foreground mt-1">Extract skills from <Link to="/projects" className="text-primary hover:underline">projects</Link> or certificates on your dashboard.</p>
+                </div>
+              ) : (
+                <div className="divide-y">
+                  {sortedSkills.map((skill, index) => {
+                    const rd = rankData[skill.name];
+                    const portfolioPct = Math.round(((1) / totalSkills) * 100);
+                    const isExpanded = expandedSkill === skill.id;
+                    const sources = getSkillSources(skill.name);
+
+                    return (
+                      <div key={skill.id}>
+                        <button
+                          onClick={() => setExpandedSkill(isExpanded ? null : skill.id)}
+                          className="w-full flex items-center justify-between px-5 py-3 hover:bg-secondary/30 transition-colors text-left"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            <span className="text-xs font-mono text-muted-foreground w-6 flex-shrink-0">#{index + 1}</span>
+                            <Diamond className="h-3.5 w-3.5 text-primary flex-shrink-0" />
+                            <span className="text-sm font-medium text-foreground truncate">{skill.name}</span>
+                            {skill.category && <Badge variant="outline" className="text-[10px] flex-shrink-0">{skill.category}</Badge>}
+                          </div>
+                          <div className="flex items-center gap-4 flex-shrink-0">
+                            {rd && (
+                              <span className="text-xs text-muted-foreground hidden sm:flex items-center gap-1">
+                                <TrendingUp className="h-3 w-3" /> {rd.usageCount} user{rd.usageCount !== 1 ? "s" : ""}
+                              </span>
+                            )}
+                            <span className="text-xs font-medium text-foreground">{portfolioPct}%</span>
+                            {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
+                          </div>
+                        </button>
+
+                        {isExpanded && (
+                          <div className="px-5 pb-4 pt-1 bg-secondary/10 space-y-3">
+                            {/* Stats row */}
+                            <div className="grid grid-cols-3 gap-3">
+                              <div className="text-center p-2 rounded-md bg-card border">
+                                <p className="text-lg font-bold text-foreground">{rd?.usageCount || 1}</p>
+                                <p className="text-[10px] text-muted-foreground">Times Used</p>
+                              </div>
+                              <div className="text-center p-2 rounded-md bg-card border">
+                                <p className="text-lg font-bold text-foreground">{portfolioPct}%</p>
+                                <p className="text-[10px] text-muted-foreground">of Portfolio</p>
+                              </div>
+                              <div className="text-center p-2 rounded-md bg-card border">
+                                <p className="text-lg font-bold text-foreground">
+                                  {rd ? `#${rd.universalRank}` : "—"}
+                                </p>
+                                <p className="text-[10px] text-muted-foreground">Universal Rank</p>
+                              </div>
+                            </div>
+
+                            {/* Sources */}
+                            <div>
+                              <p className="text-xs font-medium text-muted-foreground mb-1.5">Where this skill comes from:</p>
+                              <div className="space-y-1">
+                                {sources.map((src, i) => (
+                                  <div key={i} className="flex items-center gap-2 text-xs text-foreground">
+                                    <src.icon className="h-3.5 w-3.5 text-muted-foreground flex-shrink-0" />
+                                    <span>{src.label}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+
+                            {/* Percentage bar */}
+                            <div>
+                              <div className="flex items-center justify-between text-[10px] text-muted-foreground mb-1">
+                                <span>Portfolio weight</span>
+                                <span>{portfolioPct}%</span>
+                              </div>
+                              <div className="h-1.5 bg-secondary rounded-full overflow-hidden">
+                                <div className="h-full bg-primary rounded-full" style={{ width: `${portfolioPct}%` }} />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            <p className="text-xs text-muted-foreground text-center">
+              Skills are added via AI skill extractor from certificates, projects, and repos.
             </p>
           </div>
         </div>
-
-        {/* Skill Analytics Summary */}
-        {totalSkills > 0 && (
-          <div className="grid grid-cols-3 gap-3">
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">{totalSkills}</p>
-                <p className="text-xs text-muted-foreground">Total Skills</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">
-                  {skills.filter(s => s.category === "language").length}
-                </p>
-                <p className="text-xs text-muted-foreground">Languages</p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="p-4 text-center">
-                <p className="text-2xl font-bold text-foreground">
-                  {skills.filter(s => s.category === "framework").length}
-                </p>
-                <p className="text-xs text-muted-foreground">Frameworks</p>
-              </CardContent>
-            </Card>
-          </div>
-        )}
-
-        {/* Ranked Skill List */}
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Diamond className="h-5 w-5 text-primary" />
-                My Skills ({totalSkills})
-              </CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            {skills.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No skills yet. Extract skills from your certificates or projects below.
-              </p>
-            ) : (
-              <div className="space-y-2">
-                {skills.map((skill, index) => {
-                  const rankData = skillRanks[skill.name];
-                  const percentage = totalSkills > 0 ? Math.round(((index + 1) / totalSkills) * 100) : 0;
-                  const isExpanded = expandedSkill === skill.id;
-                  const sources = getSkillSource(skill.name);
-
-                  return (
-                    <div key={skill.id} className="border rounded-lg overflow-hidden">
-                      <button
-                        onClick={() => setExpandedSkill(isExpanded ? null : skill.id)}
-                        className="w-full flex items-center justify-between p-3 hover:bg-secondary/50 transition-colors"
-                      >
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs font-mono text-muted-foreground w-6">#{index + 1}</span>
-                          <Diamond className="h-3.5 w-3.5 text-primary" />
-                          <span className="text-sm font-medium text-foreground">{skill.name}</span>
-                          {skill.category && (
-                            <Badge variant="outline" className="text-[10px]">{skill.category}</Badge>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-3">
-                          {rankData && (
-                            <span className="text-xs text-muted-foreground flex items-center gap-1">
-                              <TrendingUp className="h-3 w-3" />
-                              {rankData.usageCount} users
-                            </span>
-                          )}
-                          <span className="text-xs text-muted-foreground">{100 - percentage}%</span>
-                          {isExpanded ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
-                        </div>
-                      </button>
-                      {isExpanded && (
-                        <div className="px-3 pb-3 pt-1 border-t bg-secondary/20">
-                          <p className="text-xs text-muted-foreground mb-1">Sources:</p>
-                          {sources.map((src, i) => (
-                            <p key={i} className="text-xs text-foreground">• {src}</p>
-                          ))}
-                          {rankData && (
-                            <p className="text-xs text-muted-foreground mt-2">
-                              Universal rank: used by {rankData.total} developer{rankData.total !== 1 ? "s" : ""}
-                            </p>
-                          )}
-                          {/* Percentage bar */}
-                          <div className="mt-2 h-1.5 bg-secondary rounded-full overflow-hidden">
-                            <div className="h-full bg-primary rounded-full" style={{ width: `${100 - percentage}%` }} />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-            <p className="text-xs text-muted-foreground mt-3">
-              Skills can only be added through the AI skill extractor — from certificates, projects, or custom content.
-            </p>
-          </CardContent>
-        </Card>
-
-        {/* Extract from Certificates */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Award className="h-5 w-5 text-primary" /> Extract from Certificates
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {certificates.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No certificates yet. Add certificates from your <Link to="/" className="text-primary hover:underline">dashboard</Link> first.
-              </p>
-            ) : (
-              certificates.map((cert) => (
-                <div key={cert.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div>
-                    <p className="text-sm font-medium">{cert.name}</p>
-                    {cert.issuer && <p className="text-xs text-muted-foreground">{cert.issuer}</p>}
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => handleExtractFromCert(cert)} disabled={extractingId === cert.id} className="gap-1">
-                    <Brain className={`h-3.5 w-3.5 ${extractingId === cert.id ? "animate-pulse" : ""}`} />
-                    {extractingId === cert.id ? "Extracting..." : "Extract Skills"}
-                  </Button>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Extract from Projects */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <FolderGit2 className="h-5 w-5 text-primary" /> Extract from Projects
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {projects.length === 0 ? (
-              <p className="text-sm text-muted-foreground">
-                No projects yet. Add projects from your <Link to="/projects" className="text-primary hover:underline">projects page</Link> first.
-              </p>
-            ) : (
-              projects.map((proj) => (
-                <div key={proj.id} className="flex items-center justify-between p-3 rounded-lg bg-secondary/50">
-                  <div>
-                    <p className="text-sm font-medium">{proj.title}</p>
-                    {proj.tech_stack?.length > 0 && <p className="text-xs text-muted-foreground">{proj.tech_stack.join(", ")}</p>}
-                  </div>
-                  <Button size="sm" variant="outline" onClick={() => handleExtractFromProject(proj)} disabled={extractingId === proj.id} className="gap-1">
-                    <Brain className={`h-3.5 w-3.5 ${extractingId === proj.id ? "animate-pulse" : ""}`} />
-                    {extractingId === proj.id ? "Extracting..." : "Extract Skills"}
-                  </Button>
-                </div>
-              ))
-            )}
-          </CardContent>
-        </Card>
-
-        {/* AI Skill Extractor - Custom Content */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Brain className="h-5 w-5 text-primary" /> AI Skill Extractor
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <p className="text-sm text-muted-foreground">Paste any technical content to extract skills automatically.</p>
-            <Textarea value={content} onChange={(e) => setContent(e.target.value)} placeholder="Paste content here..." rows={4} />
-            <Button onClick={handleExtractFromContent} disabled={isLoading} className="gap-2">
-              {isLoading ? "Extracting..." : "Extract Skills"}
-            </Button>
-            {result && (
-              <div className="mt-4 p-4 rounded-lg bg-secondary/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <p className="text-sm font-semibold">Detected: {result.detected_type} ({result.complexity_level})</p>
-                  <Button variant="ghost" size="sm" onClick={reset}>Clear</Button>
-                </div>
-                <p className="text-xs text-muted-foreground">{result.summary}</p>
-                <div className="flex flex-wrap gap-1">
-                  {result.skills.map((s) => (
-                    <Badge key={s.name} className="text-xs">{s.name} ({s.percentage}%)</Badge>
-                  ))}
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
       </div>
     </div>
   );
