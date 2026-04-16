@@ -13,9 +13,8 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { content } = await req.json();
-    const file_base64 = (await req.clone().json().catch(() => ({}))).file_base64;
-    const file_type = (await req.clone().json().catch(() => ({}))).file_type;
+    const body = await req.json();
+    const { content, file_base64, file_type, file_name } = body;
     if (!content && !file_base64) {
       return new Response(JSON.stringify({ error: "Content or file is required" }), {
         status: 400,
@@ -48,6 +47,25 @@ Rules:
 - If it's a certificate, detect the issuing platform and domain
 - If it's a project, detect the tech stack and methodologies`;
 
+    // Build multimodal user message parts
+    const userParts: any[] = [];
+
+    if (file_base64 && file_type) {
+      const isImage = file_type.startsWith("image/");
+      const isPdf = file_type === "application/pdf";
+      if (isImage || isPdf) {
+        userParts.push({
+          type: "image_url",
+          image_url: { url: `data:${file_type};base64,${file_base64}` },
+        });
+      }
+    }
+
+    const textContent = content
+      ? `Extract skills from: ${content}${file_base64 ? ". Also analyze the attached file for additional skills." : ""}`
+      : "Extract skills from the attached certificate/document file.";
+    userParts.push({ type: "text", text: textContent });
+
     const response = await fetch(GATEWAY_URL, {
       method: "POST",
       headers: {
@@ -58,7 +76,7 @@ Rules:
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Extract skills from: ${content}` },
+          { role: "user", content: userParts },
         ],
         tools: [
           {
@@ -132,9 +150,9 @@ Rules:
     return new Response(JSON.stringify(parsed), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error:", error);
-    return new Response(JSON.stringify({ error: error.message }), {
+    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : "Unknown error" }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
