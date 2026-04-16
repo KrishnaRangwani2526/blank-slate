@@ -7,6 +7,7 @@ import { useSkillExtractor } from "@/hooks/useSkillExtractor";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import type { Tables } from "@/integrations/supabase/types";
+import EditModal, { FormField, FormInput, FormTextarea, SaveButton, DeleteButton } from "./EditModal";
 
 interface Props {
   certificates: Tables<"certificates">[];
@@ -27,19 +28,40 @@ const CertificateSection = forwardRef<{ openAdd: () => void }, Props>(({ certifi
   const [saving, setSaving] = useState(false);
   const [extractingCert, setExtractingCert] = useState<string | null>(null);
   const [justAdded, setJustAdded] = useState<string | null>(null);
+  const [file, setFile] = useState<File | null>(null);
 
-  const resetForm = () => { setTitle(""); setIssuer(""); setIssueDate(""); setDescription(""); setCredentialUrl(""); };
+  const resetForm = () => { setTitle(""); setIssuer(""); setIssueDate(""); setDescription(""); setCredentialUrl(""); setFile(null); };
   const openAdd = () => { resetForm(); setAdding(true); };
   const openEdit = (c: Tables<"certificates">) => {
     setTitle(c.name); setIssuer(c.issuer || ""); setIssueDate(c.issue_date || "");
-    setCredentialUrl(c.credential_url || ""); setDescription(""); setEditing(c);
+    setCredentialUrl(c.credential_url || ""); setDescription(""); setEditing(c); setFile(null);
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      setFile(e.target.files[0]);
+    }
   };
 
   const save = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!user) return;
     setSaving(true);
-    const data = { name: title, issuer, issue_date: issueDate || null, credential_url: credentialUrl || null, user_id: user.id };
+    
+    let finalUrl = credentialUrl;
+    if (file) {
+      const ext = file.name.split(".").pop();
+      const path = `${user.id}/certificates/${Date.now()}.${ext}`;
+      const { error: uploadError } = await supabase.storage.from("avatars").upload(path, file, { upsert: true });
+      if (!uploadError) {
+        const { data: { publicUrl } } = supabase.storage.from("avatars").getPublicUrl(path);
+        finalUrl = publicUrl;
+      } else {
+        toast.error("Failed to upload file");
+      }
+    }
+
+    const data = { name: title, issuer, issue_date: issueDate || null, credential_url: finalUrl || null, user_id: user.id };
     if (editing) {
       await supabase.from("certificates").update(data).eq("id", editing.id);
       setEditing(null);
@@ -80,6 +102,28 @@ const CertificateSection = forwardRef<{ openAdd: () => void }, Props>(({ certifi
     }
   };
 
+  const form = (
+    <form onSubmit={save} className="space-y-4">
+      <FormField label="Title *"><FormInput value={title} onChange={setTitle} required /></FormField>
+      <FormField label="Description"><FormTextarea value={description} onChange={setDescription} /></FormField>
+      <FormField label="Issuer"><FormInput value={issuer} onChange={setIssuer} /></FormField>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <FormField label="Issue Date"><FormInput type="date" value={issueDate} onChange={setIssueDate} /></FormField>
+        <FormField label="Upload File (PDF/Img)">
+          <input 
+            type="file" 
+            accept=".pdf,image/jpeg,image/png,image/webp" 
+            onChange={handleFileChange} 
+            className="w-full px-3 py-1.5 rounded-md border bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-ring file:mr-3 file:py-1 file:px-3 file:rounded-md file:border-0 file:text-xs file:font-medium file:bg-secondary file:text-secondary-foreground hover:file:bg-secondary/80"
+          />
+        </FormField>
+      </div>
+      <FormField label="Or Credential URL"><FormInput value={credentialUrl} onChange={setCredentialUrl} placeholder="https://..." /></FormField>
+      <SaveButton loading={saving} />
+      {editing && <DeleteButton onClick={() => del(editing.id)} loading={saving} />}
+    </form>
+  );
+
   return (
     <>
       <div className="bg-card rounded-lg border p-6 animate-fade-in">
@@ -92,25 +136,7 @@ const CertificateSection = forwardRef<{ openAdd: () => void }, Props>(({ certifi
           )}
         </div>
 
-        {/* Add Certificate Form */}
-        {adding && (
-          <form onSubmit={save} className="mb-4 p-4 rounded-lg border bg-secondary/30 space-y-3 animate-fade-in">
-            <h3 className="text-sm font-semibold text-foreground">Add Certificate</h3>
-            <input className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" placeholder="Certificate Title *" value={title} onChange={e => setTitle(e.target.value)} required />
-            <textarea className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm min-h-[60px]" placeholder="Description" value={description} onChange={e => setDescription(e.target.value)} />
-            <input className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" placeholder="Issuer" value={issuer} onChange={e => setIssuer(e.target.value)} />
-            <input type="date" className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" value={issueDate} onChange={e => setIssueDate(e.target.value)} />
-            <input className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" placeholder="Credential URL" value={credentialUrl} onChange={e => setCredentialUrl(e.target.value)} />
-            <div className="flex gap-2">
-              <button type="submit" disabled={saving} className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm hover:bg-primary/90 disabled:opacity-50">
-                {saving ? "Saving..." : "Add Certificate"}
-              </button>
-              <button type="button" onClick={() => setAdding(false)} className="px-4 py-2 rounded-md border text-sm hover:bg-secondary">Cancel</button>
-            </div>
-          </form>
-        )}
-
-        {certificates.length === 0 && !adding ? (
+        {certificates.length === 0 ? (
           <p className="text-sm text-muted-foreground italic">No certificates added yet.</p>
         ) : (
           <div className="space-y-4">
@@ -153,24 +179,9 @@ const CertificateSection = forwardRef<{ openAdd: () => void }, Props>(({ certifi
         )}
       </div>
 
-      {/* Edit Modal */}
-      {editing && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80" onClick={() => setEditing(null)}>
-          <div className="bg-card rounded-lg border p-6 w-full max-w-md shadow-lg" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-semibold mb-4">Edit Certificate</h3>
-            <form onSubmit={save} className="space-y-3">
-              <input className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" placeholder="Title *" value={title} onChange={e => setTitle(e.target.value)} required />
-              <input className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" placeholder="Issuer" value={issuer} onChange={e => setIssuer(e.target.value)} />
-              <input type="date" className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" value={issueDate} onChange={e => setIssueDate(e.target.value)} />
-              <input className="w-full px-3 py-2 rounded-md border border-input bg-background text-sm" placeholder="Credential URL" value={credentialUrl} onChange={e => setCredentialUrl(e.target.value)} />
-              <div className="flex gap-2">
-                <button type="submit" disabled={saving} className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm">Save</button>
-                <button type="button" onClick={() => del(editing.id)} disabled={saving} className="px-4 py-2 rounded-md bg-destructive text-destructive-foreground text-sm">Delete</button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
+      <EditModal title={editing ? "Edit Certificate" : "Add Certificate"} open={adding || !!editing} onClose={() => { setAdding(false); setEditing(null); }}>
+        {form}
+      </EditModal>
     </>
   );
 });

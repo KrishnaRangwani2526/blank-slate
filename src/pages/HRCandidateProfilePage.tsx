@@ -95,6 +95,54 @@ export default function HRCandidateProfilePage() {
     enabled: !!candidateUserId,
   });
 
+  // Fetch learning goals for streak calculation
+  const { data: learningGoals = [] } = useQuery({
+    queryKey: ["candidate-learning-goals", candidateUserId],
+    queryFn: async () => {
+      const { data } = await supabase.from("learning_goals").select("*").eq("user_id", candidateUserId!);
+      return data || [];
+    },
+    enabled: !!candidateUserId,
+  });
+
+  // Helper function to calculate streak from dates
+  const calculateStreakFromDates = (dates: string[]) => {
+    if (!dates || dates.length === 0) return 0;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const activeDates = new Set<string>();
+    dates.forEach(dateStr => {
+      if (dateStr) {
+        const date = new Date(dateStr);
+        date.setHours(0, 0, 0, 0);
+        activeDates.add(date.toISOString().split('T')[0]);
+      }
+    });
+
+    let streak = 0;
+    for (let i = 0; i < 30; i++) {
+      const d = new Date(today);
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toISOString().split('T')[0];
+      if (activeDates.has(dateStr)) {
+        streak++;
+      } else if (streak > 0) {
+        break;
+      }
+    }
+    return streak;
+  };
+
+  // Calculate aspiring streak from all activities
+  const allActivityDates = [
+    ...(learningGoals?.map(g => g.created_at) || []),
+    ...(projects?.map(p => p.created_at) || []),
+    ...(certificates?.map(c => c.created_at) || []),
+  ];
+  const aspiringStreak = calculateStreakFromDates(allActivityDates);
+
   // Fetch HR's jobs for job-matched ATS
   const { data: hrJobs = [] } = useQuery({
     queryKey: ["hr-jobs-for-ats"],
@@ -410,7 +458,7 @@ o
             universal_rank: universalRanking?.universal_rank,
             job_rank: jobAtsResult?.python_job_rank 
           }}
-          streaks={{ github: 0, leetcode: 0, kaggle: 0, aspiring: 0 }}
+          streaks={{ github: 0, leetcode: 0, kaggle: 0, aspiring: aspiringStreak }}
           onMessageClick={() => setMessageOpen(true)}
           isHR={true}
           onReleaseResult={() => setResultDialogOpen(true)}

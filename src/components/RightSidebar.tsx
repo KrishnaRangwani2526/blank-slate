@@ -3,8 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Trophy, Flame, ChevronDown, ChevronUp, Code2, BarChart2, Globe, BookOpen,
 } from "lucide-react";
-
-const streakDays = [1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 1, 0, 0, 1, 1, 1, 0, 1, 1, 1, 1, 1, 0, 1, 1, 0, 1, 1, 1, 0];
+import { useStreakData } from "@/hooks/useStreakData";
 
 const urls = [
   { label: "GitHub", icon: Code2, url: "https://github.com/krishnarangwani" },
@@ -20,7 +19,10 @@ const learningItems = [
 
 const RightSidebar = () => {
   const [urlsOpen, setUrlsOpen] = useState(false);
-  const currentStreak = 7;
+  const { data: streakData, isLoading: streakLoading } = useStreakData();
+
+  const currentStreak = streakData?.aspiring?.streak || 0;
+  const streakDays = streakData?.aspiring?.streak_days || Array(30).fill(0);
 
   return (
     <div className="space-y-3">

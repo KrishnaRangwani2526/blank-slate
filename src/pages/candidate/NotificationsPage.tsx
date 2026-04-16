@@ -4,7 +4,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import Navbar from "@/components/Navbar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Bell, Circle, Check } from "lucide-react";
+import { Bell, Circle, Check, X, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 
@@ -17,7 +17,21 @@ const NotificationsPage = () => {
     mutationFn: async (id: string) => {
       await supabase.from("notifications").update({ is_read: true }).eq("id", id);
     },
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["candidate-notifications"] }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["candidate-notifications", user?.id] }),
+  });
+
+  const removeNotification = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("notifications").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Notification removed");
+      queryClient.invalidateQueries({ queryKey: ["candidate-notifications", user?.id] });
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to remove notification");
+    }
   });
 
   const acceptJoinRequest = useMutation({
@@ -57,7 +71,7 @@ const NotificationsPage = () => {
     },
     onSuccess: () => {
       toast.success("Successfully joined the company! Profile updated.");
-      queryClient.invalidateQueries({ queryKey: ["candidate-notifications"] });
+      queryClient.invalidateQueries({ queryKey: ["candidate-notifications", user?.id] });
       queryClient.invalidateQueries({ queryKey: ["candidate-experience"] });
     },
     onError: (error: any) => {
@@ -89,13 +103,24 @@ const NotificationsPage = () => {
         ) : (
           <div className="space-y-3">
             {notifications.map((notification) => (
-              <Card key={notification.id} className={`${notification.is_read ? "bg-muted/30" : "border-primary bg-primary/5"}`}>
+              <Card 
+                key={notification.id} 
+                className={`transition-all duration-300 ${
+                  notification.is_read 
+                    ? "bg-slate-50/50 border-transparent shadow-none opacity-50 grayscale-[20%]" 
+                    : "border-primary/30 bg-primary/[0.03] shadow-sm"
+                }`}
+              >
                 <CardHeader className="flex flex-row items-start justify-between gap-4 py-4">
-                  <div className="flex items-start gap-3 flex-1">
+                  <div className={`flex items-start gap-3 flex-1 ${notification.is_read ? 'opacity-60' : 'opacity-100'}`}>
                     <Circle className={`h-3 w-3 mt-1.5 shrink-0 ${notification.is_read ? "text-muted-foreground" : "fill-primary text-primary"}`} />
                     <div className="space-y-1 w-full">
-                      <CardTitle className="text-sm font-semibold">{notification.type || "Update"}</CardTitle>
-                      <p className="text-sm text-foreground/80">{notification.message}</p>
+                      <CardTitle className={`text-sm ${notification.is_read ? "font-medium text-muted-foreground" : "font-semibold"}`}>
+                        {notification.type || "Update"}
+                      </CardTitle>
+                      <p className={`text-sm ${notification.is_read ? "text-muted-foreground" : "text-foreground/90"}`}>
+                        {notification.message}
+                      </p>
                       <p className="text-xs text-muted-foreground pt-1">{new Date(notification.created_at).toLocaleString()}</p>
                       
                       {/* Interactive Section for Join Requests */}
@@ -119,11 +144,28 @@ const NotificationsPage = () => {
 
                     </div>
                   </div>
-                  {!notification.is_read && (
-                    <Button variant="ghost" size="sm" onClick={() => markRead.mutate(notification.id)} className="shrink-0 h-8 text-xs text-muted-foreground hover:text-foreground">
-                      Mark as read
+                  
+                  <div className="flex items-center gap-2 shrink-0">
+                    {!notification.is_read && (
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => markRead.mutate(notification.id)} 
+                        className="shrink-0 h-8 text-xs font-medium text-primary hover:bg-primary/10"
+                      >
+                        Mark as read
+                      </Button>
+                    )}
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={() => removeNotification.mutate(notification.id)} 
+                      className="shrink-0 h-8 w-8 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                      title="Remove notification"
+                    >
+                      <Trash2 className="h-4 w-4" />
                     </Button>
-                  )}
+                  </div>
                 </CardHeader>
               </Card>
             ))}
