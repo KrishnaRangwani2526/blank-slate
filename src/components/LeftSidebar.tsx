@@ -192,20 +192,26 @@ const LeftSidebar = () => {
 
       {/* Skill Section - shows top skills and count */}
       <Link to="/skills" className="block bg-card rounded-xl border p-4 hover:shadow-md transition-shadow">
-        <div className="flex items-center gap-2 mb-2">
-          <Sparkles className="h-4 w-4 text-secondary" />
-          <span className="text-sm font-semibold text-card-foreground">Skill Section</span>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-card-foreground">Skills</span>
+          </div>
+          <span className="text-xs font-bold text-foreground bg-secondary px-2 py-0.5 rounded-full">{skills.length}</span>
         </div>
         {skills.length > 0 ? (
-          <div className="space-y-1 text-sm text-foreground">
-            {skills.map((skill, index) => (
-              <p key={index} className="truncate">{skill.name}</p>
+          <div className="space-y-1">
+            {skills.slice(0, 4).map((skill, index) => (
+              <div key={index} className="flex items-center justify-between">
+                <p className="text-sm text-foreground truncate">{skill.name}</p>
+              </div>
             ))}
+            {skills.length > 4 && <p className="text-xs text-muted-foreground">+{skills.length - 4} more</p>}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">Top skills will appear here.</p>
+          <p className="text-xs text-muted-foreground">No skills yet. Extract from projects or certificates.</p>
         )}
-        <p className="mt-3 text-xs text-primary font-medium">Open Skills Dashboard</p>
+        <p className="mt-3 text-xs text-primary font-medium">Open Skills Dashboard →</p>
       </Link>
 
       {/* Projects */}
