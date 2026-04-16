@@ -77,6 +77,8 @@ function AppRoutes() {
         <Route path="/resume" element={<CandidateResume />} />
         <Route path="/network" element={<CandidateNetwork />} />
         <Route path="/settings" element={<CandidateSettings />} />
+        <Route path="/search" element={<CandidateSearch />} />
+        <Route path="/profile/:userId" element={<CandidatePublicProfile />} />
         <Route path="*" element={<NotFound />} />
       </Routes>
     );
