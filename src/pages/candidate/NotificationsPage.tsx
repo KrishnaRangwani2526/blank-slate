@@ -32,7 +32,7 @@ const NotificationsPage = () => {
       const { error: empError } = await supabase.from("employees").insert({
         company_id: metadata.company_id,
         name: profile?.full_name || user.email || "Employee",
-        email: profile?.email || user.email,
+        email: (profile as any)?.email || user.email,
         role: metadata.role || "Software Engineer",
         status: "active",
         joined_at: new Date().toISOString()
