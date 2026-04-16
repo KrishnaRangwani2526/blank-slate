@@ -8,33 +8,49 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function Jobs() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const { company } = useAuth();
   const [statusFilter, setStatusFilter] = useState("all");
   const [typeFilter, setTypeFilter] = useState("all");
 
   const { data: jobs = [], isLoading } = useQuery({
-    queryKey: ["jobs"],
+    queryKey: ["jobs", company?.id],
     queryFn: async () => {
-      const { data, error } = await supabase.from("jobs").select("*").order("created_at", { ascending: false });
+      if (!company?.id) return [];
+      const { data, error } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("company_id", company.id)
+        .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
     },
+    enabled: !!company?.id,
   });
 
   const deleteJob = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("jobs").delete().eq("id", id);
+      const { error, count } = await supabase
+        .from("jobs")
+        .delete({ count: 'exact' })
+        .eq("id", id);
+      
       if (error) throw error;
+      if (count === 0) throw new Error("You do not have permission to delete this job or it doesn't exist.");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["jobs"] });
       toast.success("Job deleted");
     },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete job");
+    }
   });
 
   const filtered = jobs.filter((j) => {

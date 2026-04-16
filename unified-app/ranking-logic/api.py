@@ -97,12 +97,6 @@ def list_candidates(svc: RankingService = Depends(get_service)):
     return svc.list_candidates()
 
 
-@app.delete("/candidates/{candidate_id}", summary="Delete a candidate")
-def delete_candidate(candidate_id: int, svc: RankingService = Depends(get_service)):
-    ok = svc.remove(candidate_id)
-    if not ok:
-        raise HTTPException(status_code=404, detail="Candidate not found")
-    return {"deleted": candidate_id}
 
 
 # ── Metrics catalogue ─────────────────────────────────────────────────────────
@@ -147,7 +141,7 @@ def rank_for_job(req: JobRankRequest, svc: RankingService = Depends(get_service)
 
 
 @app.get("/rank/skill/{skill_name}/candidate/{candidate_id}", summary="Get candidate's rank for a specific skill")
-def get_skill_rank(skill_name: str, candidate_id: int, svc: RankingService = Depends(get_service)):
+def get_skill_rank(skill_name: str, candidate_id: str, svc: RankingService = Depends(get_service)):
     rank = svc.get_skill_rank(skill_name, candidate_id)
     if rank is None:
         raise HTTPException(status_code=404, detail="Skill or candidate not found")
@@ -155,7 +149,7 @@ def get_skill_rank(skill_name: str, candidate_id: int, svc: RankingService = Dep
 
 
 @app.get("/rank/candidate/{candidate_id}", summary="Get candidate's universal ranking")
-def get_candidate_rank(candidate_id: int, svc: RankingService = Depends(get_service)):
+def get_candidate_rank(candidate_id: str, svc: RankingService = Depends(get_service)):
     candidate_rank = svc.get_candidate_rank(candidate_id)
     if candidate_rank is None:
         raise HTTPException(status_code=404, detail="Candidate not found")

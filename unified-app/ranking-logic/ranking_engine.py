@@ -29,7 +29,7 @@ from collections import defaultdict
 @dataclass
 class SkillData:
     name: str
-    candidate_id: int
+    candidate_id: str
     candidate_name: str
     github_streak: int = 0
     leetcode_streak: int = 0
@@ -41,7 +41,7 @@ class SkillData:
 class SkillRank:
     skill_name: str
     rank: int
-    candidate_id: int
+    candidate_id: str
     candidate_name: str
     tiebreak_score: float  # For same skill ranks
 
@@ -116,7 +116,7 @@ def calculate_ats_score(candidate: CandidateData, job_requirements: JobRequireme
 
 @dataclass
 class CandidateData:
-    id: int
+    id: str
     name: str
     skills: List[str] = field(default_factory=list)
     github_streak: int = 0
@@ -376,7 +376,7 @@ def compute_job_ranking(
 
 # ── Utility functions ────────────────────────────────────────────────────────
 
-def get_skill_rank(skill_name: str, candidate_id: int, skill_rankings: Dict[str, List[SkillRank]]) -> Optional[int]:
+def get_skill_rank(skill_name: str, candidate_id: str, skill_rankings: Dict[str, List[SkillRank]]) -> Optional[int]:
     """Get a specific candidate's rank for a specific skill."""
     if skill_name not in skill_rankings:
         return None
@@ -388,7 +388,7 @@ def get_skill_rank(skill_name: str, candidate_id: int, skill_rankings: Dict[str,
     return None
 
 
-def get_candidate_rank(candidate_id: int, candidate_ranks: List[CandidateRank]) -> Optional[CandidateRank]:
+def get_candidate_rank(candidate_id: str, candidate_ranks: List[CandidateRank]) -> Optional[CandidateRank]:
     """Get a candidate's ranking information."""
     for cr in candidate_ranks:
         if cr.candidate.id == candidate_id:

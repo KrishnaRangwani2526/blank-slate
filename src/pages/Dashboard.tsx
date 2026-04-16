@@ -13,30 +13,44 @@ export default function Dashboard() {
   const navigate = useNavigate();
 
   const { data: jobs = [] } = useQuery({
-    queryKey: ["jobs"],
+    queryKey: ["jobs", company?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("jobs").select("*");
+      if (!company?.id) return [];
+      const { data } = await supabase
+        .from("jobs")
+        .select("*")
+        .eq("company_id", company.id)
+        .order("created_at", { ascending: false });
       return data || [];
     },
-    enabled: !!company,
+    enabled: !!company?.id,
   });
 
   const { data: employees = [] } = useQuery({
-    queryKey: ["employees"],
+    queryKey: ["employees", company?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("employees").select("*");
+      if (!company?.id) return [];
+      const { data } = await supabase
+        .from("employees")
+        .select("*")
+        .eq("company_id", company.id);
       return data || [];
     },
-    enabled: !!company,
+    enabled: !!company?.id,
   });
 
   const { data: applications = [] } = useQuery({
-    queryKey: ["applications"],
+    queryKey: ["applications", company?.id],
     queryFn: async () => {
-      const { data } = await supabase.from("applications").select("*");
+      if (!company?.id) return [];
+      const { data } = await supabase
+        .from("applications")
+        .select("*, jobs!inner(*)")
+        .eq("jobs.company_id", company.id)
+        .order("created_at", { ascending: false });
       return data || [];
     },
-    enabled: !!company,
+    enabled: !!company?.id,
   });
 
   const activeJobs = jobs.filter((j) => j.status === "active").length;

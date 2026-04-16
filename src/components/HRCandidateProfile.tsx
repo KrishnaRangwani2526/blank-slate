@@ -71,6 +71,9 @@ interface HRCandidateProfileProps {
   streaks: Streak;
   onMessageClick?: () => void;
   onCommentAdd?: (projectId: string, comment: string) => void;
+  isHR?: boolean;
+  onReleaseResult?: () => void;
+  onJoinRequest?: () => void;
 }
 
 export function HRCandidateProfile({
@@ -79,6 +82,9 @@ export function HRCandidateProfile({
   streaks,
   onMessageClick,
   onCommentAdd,
+  isHR,
+  onReleaseResult,
+  onJoinRequest,
 }: HRCandidateProfileProps) {
   const [expandedStreak, setExpandedStreak] = useState(false);
   const [projectComments, setProjectComments] = useState<Record<string, string>>({});
@@ -290,6 +296,33 @@ export function HRCandidateProfile({
 
       {/* Ranking Sidebar - Right side (1 column) */}
       <div className="lg:col-span-1 space-y-4">
+        {/* Core HR Actions Card */}
+        {isHR && (
+          <Card className="border-primary/50 bg-primary/5 shadow-sm">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base font-bold flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-primary" />
+                HR Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button 
+                onClick={onReleaseResult} 
+                className="w-full justify-start text-left font-semibold"
+              >
+                Release Interview Result
+              </Button>
+              <Button 
+                onClick={onJoinRequest} 
+                variant="outline" 
+                className="w-full justify-start text-left font-semibold border-primary/50 text-primary hover:bg-primary/10"
+              >
+                Send Join Request
+              </Button>
+            </CardContent>
+          </Card>
+        )}
+
         {/* ATS Score Card */}
         {ranking.ats_score !== undefined && (
           <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">

@@ -93,12 +93,12 @@ class RankingService:
 
     # ── Individual rank lookups ──────────────────────────────────────────────
 
-    def get_skill_rank(self, skill_name: str, candidate_id: int) -> Optional[int]:
+    def get_skill_rank(self, skill_name: str, candidate_id: str) -> Optional[int]:
         """Get a candidate's rank for a specific skill."""
         skill_rankings, _ = self.rank_universal()
         return get_skill_rank(skill_name, candidate_id, skill_rankings)
 
-    def get_candidate_rank(self, candidate_id: int) -> Optional[CandidateRank]:
+    def get_candidate_rank(self, candidate_id: str) -> Optional[CandidateRank]:
         """Get a candidate's overall ranking information."""
         _, candidate_ranks = self.rank_universal()
         return get_candidate_rank(candidate_id, candidate_ranks)

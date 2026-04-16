@@ -51,8 +51,8 @@ export default function Auth() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background px-4">
-      <div className="onboarding-card bg-card border rounded-2xl shadow-sm p-8 max-w-md w-full animate-fade-in">
+    <div className="min-h-screen flex items-center justify-center bg-background px-4 py-4">
+      <div className="onboarding-card bg-card border rounded-2xl shadow-sm p-8 max-w-md w-full max-h-[95vh] overflow-y-auto animate-fade-in scrollbar-hide">
         <div className="text-center mb-8">
           <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
             <LogIn className="w-7 h-7 text-primary" />

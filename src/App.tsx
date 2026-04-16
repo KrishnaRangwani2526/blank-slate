@@ -102,7 +102,14 @@ function AppRoutes() {
     );
   }
 
-  return <div>Role not determined</div>;
+  return (
+    <div className="flex h-screen w-full items-center justify-center bg-background">
+      <div className="flex flex-col items-center gap-4">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
+        <p className="text-muted-foreground text-sm">Syncing profile...</p>
+      </div>
+    </div>
+  );
 }
 
 function App() {

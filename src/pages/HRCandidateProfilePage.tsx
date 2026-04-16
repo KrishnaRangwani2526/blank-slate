@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
@@ -27,7 +27,14 @@ export default function HRCandidateProfilePage() {
   const [jobAtsResult, setJobAtsResult] = useState<any>(null);
   const [selectedJobId, setSelectedJobId] = useState<string>("");
 
-  // Fetch candidate profile from profiles table using user_id
+  const [resultDialogOpen, setResultDialogOpen] = useState(false);
+  const [releaseStatus, setReleaseStatus] = useState<"passed" | "rejected" | "">("");
+  const [resultMessage, setResultMessage] = useState("");
+  
+  const [joinDialogOpen, setJoinDialogOpen] = useState(false);
+  const [joinRole, setJoinRole] = useState("");
+  const [joinMessage, setJoinMessage] = useState("");
+
   const { data: profile, isLoading: profileLoading } = useQuery({
     queryKey: ["candidate-profile", candidateUserId],
     queryFn: async () => {
@@ -97,7 +104,30 @@ export default function HRCandidateProfilePage() {
     },
   });
 
-  // Candidate-only ATS Analysis
+  // Universal Rank via Python API
+  const { data: universalRanking, isLoading: universalRankingLoading } = useQuery({
+    queryKey: ["universal-rank", candidateUserId],
+    queryFn: async () => {
+      try {
+        const response = await fetch("http://localhost:8000/rank/universal", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}) // Rank everyone to get relative global rank
+        });
+        if (!response.ok) return null;
+        const data = await response.json();
+        const candidateRank = data.candidate_ranks?.find((c: any) => c.candidate_id === candidateUserId);
+        return candidateRank || null;
+      } catch (e) {
+        console.warn("Python Ranking Engine is offline or failed", e);
+        return null;
+      }
+    },
+    enabled: !!candidateUserId,
+    retry: false // Don't block UI if engine is offline
+  });
+
+  // Candidate-only ATS Analysis (Fallback Local Heuristic)
   const handleCandidateATS = async () => {
     if (!profile) return;
     setAtsLoading(true);
@@ -130,7 +160,7 @@ export default function HRCandidateProfilePage() {
     }
   };
 
-  // Job-Matched ATS
+  // Job-Matched ATS (Uses Python Backend if available)
   const handleJobMatchedATS = async () => {
     if (!profile || !selectedJobId) {
       toast.error("Select a job to match against");
@@ -138,7 +168,6 @@ export default function HRCandidateProfilePage() {
     }
     setJobAtsLoading(true);
     try {
-      await new Promise((r) => setTimeout(r, 1500));
       const job = hrJobs.find((j) => j.id === selectedJobId);
       if (!job) throw new Error("Job not found");
 
@@ -146,6 +175,39 @@ export default function HRCandidateProfilePage() {
         ? job.requirements.map((r: any) => (typeof r === "string" ? r : r?.name || "")).filter(Boolean)
         : [];
 
+      // Try hitting the Python Advanced Logic API
+      try {
+        const response = await fetch("http://localhost:8000/rank/job", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            job_id: job.id,
+            required_skills: requiredSkills
+          })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const pRank = data.job_candidates?.find((c: any) => c.candidate_id === profile.user_id);
+          if (pRank) {
+            setJobAtsResult({
+              job_title: job.title,
+              match_percentage: Math.round(pRank.ats_score),
+              matched_skills: pRank.relevant_skill_ranks ? Object.keys(pRank.relevant_skill_ranks) : [],
+              missing_skills: requiredSkills.filter((rs: string) => !pRank.skills?.includes(rs)),
+              total_required: requiredSkills.length,
+              gap_analysis: `Candidate Ranked #${pRank.job_rank} globally for this job out of ${data.job_candidates.length} applying via Python Engine.`,
+              python_job_rank: pRank.job_rank
+            });
+            return; // Successful Python API response, skip fallback
+          }
+        }
+      } catch (e) {
+        console.warn("Python API unreachable, running frontend heuristic fallback", e);
+      }
+
+      // Fallback Native JS logic
+      await new Promise((r) => setTimeout(r, 1000));
       const candidateSkillNames = skills.map((s) => s.name.toLowerCase());
       const matched = requiredSkills.filter((rs: string) => candidateSkillNames.includes(rs.toLowerCase()));
       const missing = requiredSkills.filter((rs: string) => !candidateSkillNames.includes(rs.toLowerCase()));
@@ -158,11 +220,73 @@ export default function HRCandidateProfilePage() {
         missing_skills: missing,
         total_required: requiredSkills.length,
         gap_analysis: missing.length > 0
-          ? `Candidate is missing ${missing.length} out of ${requiredSkills.length} required skills: ${missing.join(", ")}`
-          : "Candidate matches all required skills!",
+          ? `Candidate is missing ${missing.length} out of ${requiredSkills.length} required skills (Heuristic Score).`
+          : "Candidate matches all required skills! (Heuristic Score)",
       });
     } finally {
       setJobAtsLoading(false);
+    }
+  };
+
+  const handleReleaseResult = async () => {
+    if (!selectedJobId || !releaseStatus) {
+      toast.error("Please select a job and a result status");
+      return;
+    }
+    
+    const job = hrJobs.find(j => j.id === selectedJobId);
+    if (!job) return;
+
+    try {
+      // 1. Update application status
+      await supabase.from("applications")
+        .update({ status: releaseStatus })
+        .eq("job_id", selectedJobId)
+        .eq("user_id", profile.user_id);
+o
+      // 2. Notify candidate
+      await supabase.from("notifications").insert({
+        user_id: profile.user_id,
+        company_id: hrJobs[0]?.company_id, // Best effort company_id from context
+        type: 'interview_result',
+        message: resultMessage || `Your application for ${job.title} has been updated to ${releaseStatus}.`,
+      });
+
+      toast.success("Interview result released successfully");
+      setResultDialogOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to release result");
+    }
+  };
+
+  const handleSendJoinRequest = async () => {
+    if (!selectedJobId || !joinRole) {
+      toast.error("Please select an originating job context and specify a role");
+      return;
+    }
+
+    const job = hrJobs.find(j => j.id === selectedJobId);
+    try {
+      // Fetch the company info
+      const { data: company } = await supabase.from("companies").select("*").eq("id", job.company_id).single();
+
+      await supabase.from("notifications").insert({
+        user_id: profile.user_id,
+        company_id: job.company_id,
+        type: 'job_invite',
+        message: joinMessage || `You have been offered the position of ${joinRole} at ${company?.name || 'our company'}. Click to accept the offer and join.`,
+        metadata: {
+          company_id: job.company_id,
+          company_name: company?.name || 'Company',
+          role: joinRole,
+          status: 'pending'
+        }
+      });
+
+      toast.success("Join request sent to candidate!");
+      setJoinDialogOpen(false);
+    } catch (e: any) {
+      toast.error(e.message || "Failed to send join request");
     }
   };
 
@@ -281,9 +405,16 @@ export default function HRCandidateProfilePage() {
         {/* Profile (non-editable) */}
         <HRCandidateProfile
           candidate={candidateData}
-          ranking={{ ats_score: atsResult?.ats_score }}
+          ranking={{ 
+            ats_score: atsResult?.ats_score || jobAtsResult?.match_percentage,
+            universal_rank: universalRanking?.universal_rank,
+            job_rank: jobAtsResult?.python_job_rank 
+          }}
           streaks={{ github: 0, leetcode: 0, kaggle: 0, aspiring: 0 }}
           onMessageClick={() => setMessageOpen(true)}
+          isHR={true}
+          onReleaseResult={() => setResultDialogOpen(true)}
+          onJoinRequest={() => setJoinDialogOpen(true)}
         />
 
         {/* HR AI Tools */}
@@ -479,6 +610,114 @@ export default function HRCandidateProfilePage() {
             </div>
           </DialogContent>
         </Dialog>
+
+        {/* Release Result Dialog */}
+        <Dialog open={resultDialogOpen} onOpenChange={setResultDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Release Result for {profile.full_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Select Job</label>
+                <select
+                  className="w-full p-2 border rounded-md bg-background"
+                  value={selectedJobId}
+                  onChange={(e) => setSelectedJobId(e.target.value)}
+                >
+                  <option value="">-- Choose a job --</option>
+                  {hrJobs.map((j) => (
+                    <option key={j.id} value={j.id}>{j.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Result</label>
+                <div className="grid grid-cols-2 gap-2">
+                  <Button 
+                    variant={releaseStatus === "passed" ? "default" : "outline"}
+                    className={releaseStatus === "passed" ? "bg-green-600 hover:bg-green-700" : ""}
+                    onClick={() => setReleaseStatus("passed")}
+                  >
+                    Passed
+                  </Button>
+                  <Button 
+                    variant={releaseStatus === "rejected" ? "default" : "outline"}
+                    className={releaseStatus === "rejected" ? "bg-red-600 hover:bg-red-700" : ""}
+                    onClick={() => setReleaseStatus("rejected")}
+                  >
+                    Rejected
+                  </Button>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Custom Feedback (Sent to Candidate)</label>
+                <Textarea
+                  placeholder="Optional feedback..."
+                  value={resultMessage}
+                  onChange={(e) => setResultMessage(e.target.value)}
+                  className="min-h-24"
+                />
+              </div>
+
+              <Button className="w-full" onClick={handleReleaseResult}>Publish Result</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {/* Send Join Request Dialog */}
+        <Dialog open={joinDialogOpen} onOpenChange={setJoinDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Extend Offer to {profile.full_name}</DialogTitle>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="bg-primary/10 border border-primary/20 p-3 rounded text-sm text-primary">
+                Sending a join request will notify the candidate. Upon their acceptance, they will automatically be added as an employee to your company's hierarchy.
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Context Job</label>
+                <select
+                  className="w-full p-2 border rounded-md bg-background"
+                  value={selectedJobId}
+                  onChange={(e) => setSelectedJobId(e.target.value)}
+                >
+                  <option value="">-- Choose a job --</option>
+                  {hrJobs.map((j) => (
+                    <option key={j.id} value={j.id}>{j.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Offered Role</label>
+                <input 
+                  type="text" 
+                  className="w-full p-2 border rounded-md bg-background"
+                  placeholder="e.g. Senior Frontend Developer"
+                  value={joinRole}
+                  onChange={(e) => setJoinRole(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Offer Message / Terms</label>
+                <Textarea
+                  placeholder="Welcome to the team! Our offer includes..."
+                  value={joinMessage}
+                  onChange={(e) => setJoinMessage(e.target.value)}
+                  className="min-h-24"
+                />
+              </div>
+
+              <Button className="w-full" onClick={handleSendJoinRequest}>Send Join Request</Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </DashboardLayout>
   );
